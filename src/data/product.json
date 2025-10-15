@@ -1,0 +1,270 @@
+{
+  "products": [
+    {
+      "id": "iphone-15-pro",
+      "name": "iPhone 15 Pro Max 256GB",
+      "price": 29990000,
+      "originalPrice": 34990000,
+      "image": "/placeholder.svg?height=400&width=400",
+      "category": "Điện thoại",
+      "rating": 5,
+      "inStock": true,
+      "description": "Chip A17 Pro, Camera 48MP, Titanium",
+      "specifications": {
+        "Màn hình": "6.7 inch, Super Retina XDR OLED, 2796 x 1290 pixels",
+        "Chip xử lý": "Apple A17 Pro 6 nhân",
+        "RAM": "8 GB",
+        "Bộ nhớ trong": "256 GB",
+        "Camera sau": "Chính 48 MP & Phụ 12 MP, 12 MP",
+        "Camera trước": "12 MP",
+        "Pin": "4422 mAh, Sạc nhanh 20W",
+        "Hệ điều hành": "iOS 17",
+        "Chất liệu": "Khung Titanium, Mặt lưng kính cường lực"
+      },
+      "detailedDescription": "iPhone 15 Pro Max là chiếc smartphone cao cấp nhất của Apple với thiết kế khung viền Titanium siêu bền, nhẹ hơn 19g so với thế hệ trước. Chip A17 Pro mạnh mẽ mang đến hiệu năng vượt trội cho mọi tác vụ từ gaming đến chỉnh sửa video chuyên nghiệp. Hệ thống camera Pro với cảm biến 48MP cho phép chụp ảnh với độ chi tiết tuyệt vời, zoom quang học 5x và chế độ chụp đêm được cải thiện đáng kể."
+    },
+    {
+      "id": "samsung-s24-ultra",
+      "name": "Samsung Galaxy S24 Ultra 512GB",
+      "price": 31990000,
+      "originalPrice": 36990000,
+      "image": "/placeholder.svg?height=400&width=400",
+      "category": "Điện thoại",
+      "rating": 5,
+      "inStock": true,
+      "description": "Snapdragon 8 Gen 3, S Pen, Camera 200MP",
+      "specifications": {
+        "Màn hình": "6.8 inch, Dynamic AMOLED 2X, 3120 x 1440 pixels, 120Hz",
+        "Chip xử lý": "Snapdragon 8 Gen 3 for Galaxy",
+        "RAM": "12 GB",
+        "Bộ nhớ trong": "512 GB",
+        "Camera sau": "Chính 200 MP & Phụ 50 MP, 12 MP, 10 MP",
+        "Camera trước": "12 MP",
+        "Pin": "5000 mAh, Sạc nhanh 45W",
+        "Hệ điều hành": "Android 14, One UI 6.1",
+        "Đặc biệt": "S Pen tích hợp, Gorilla Armor"
+      },
+      "detailedDescription": "Galaxy S24 Ultra là flagship đỉnh cao của Samsung với camera 200MP ấn tượng, màn hình Dynamic AMOLED 2X sáng nhất từ trước đến nay và bút S Pen tích hợp tiện lợi. Chip Snapdragon 8 Gen 3 được tối ưu riêng cho Galaxy mang lại hiệu năng mạnh mẽ và tiết kiệm pin. Tính năng Galaxy AI với khả năng dịch trực tiếp cuộc gọi, chỉnh sửa ảnh thông minh và trợ lý ảo thông minh."
+    },
+    {
+      "id": "macbook-pro-m3",
+      "name": "MacBook Pro 14 inch M3 Pro 18GB",
+      "price": 52990000,
+      "originalPrice": 57990000,
+      "image": "/placeholder.svg?height=400&width=400",
+      "category": "Laptop",
+      "rating": 5,
+      "inStock": true,
+      "description": "Chip M3 Pro, 18GB RAM, 512GB SSD",
+      "specifications": {
+        "Màn hình": "14.2 inch, Liquid Retina XDR, 3024 x 1964 pixels, 120Hz",
+        "Chip xử lý": "Apple M3 Pro 11 nhân CPU, 14 nhân GPU",
+        "RAM": "18 GB Unified Memory",
+        "Ổ cứng": "512 GB SSD",
+        "Card đồ họa": "GPU 14 nhân tích hợp",
+        "Pin": "70Wh, Sử dụng lên đến 18 giờ",
+        "Hệ điều hành": "macOS Sonoma",
+        "Cổng kết nối": "3x Thunderbolt 4, HDMI, SDXC, MagSafe 3"
+      },
+      "detailedDescription": "MacBook Pro 14 inch với chip M3 Pro mang đến hiệu năng vượt trội cho các tác vụ chuyên nghiệp như chỉnh sửa video 8K, render 3D và lập trình. Màn hình Liquid Retina XDR với độ sáng 1600 nits cho trải nghiệm hình ảnh tuyệt đẹp. Thời lượng pin lên đến 18 giờ giúp bạn làm việc cả ngày không cần sạc."
+    },
+    {
+      "id": "dell-xps-15",
+      "name": "Dell XPS 15 9530 i7-13700H RTX 4060",
+      "price": 45990000,
+      "originalPrice": 49990000,
+      "image": "/placeholder.svg?height=400&width=400",
+      "category": "Laptop",
+      "rating": 4,
+      "inStock": true,
+      "description": "Intel Core i7, 16GB RAM, RTX 4060",
+      "specifications": {
+        "Màn hình": "15.6 inch, OLED 3.5K, 3456 x 2160 pixels, 60Hz",
+        "Chip xử lý": "Intel Core i7-13700H (14 nhân, 20 luồng)",
+        "RAM": "16 GB DDR5 4800MHz",
+        "Ổ cứng": "512 GB SSD NVMe",
+        "Card đồ họa": "NVIDIA GeForce RTX 4060 8GB GDDR6",
+        "Pin": "86Wh, Sử dụng lên đến 10 giờ",
+        "Hệ điều hành": "Windows 11 Home",
+        "Cổng kết nối": "2x Thunderbolt 4, USB-C 3.2, SD Card Reader"
+      },
+      "detailedDescription": "Dell XPS 15 9530 là laptop cao cấp với thiết kế sang trọng, màn hình OLED 3.5K tuyệt đẹp và hiệu năng mạnh mẽ từ chip Intel thế hệ 13 cùng card đồ họa RTX 4060. Phù hợp cho cả công việc sáng tạo nội dung và chơi game. Bàn phím có đèn nền, touchpad lớn và hệ thống loa stereo chất lượng cao."
+    },
+    {
+      "id": "ipad-pro-m2",
+      "name": "iPad Pro M2 11 inch 256GB WiFi",
+      "price": 22990000,
+      "originalPrice": 25990000,
+      "image": "/placeholder.svg?height=400&width=400",
+      "category": "Tablet",
+      "rating": 5,
+      "inStock": true,
+      "description": "Chip M2, Liquid Retina Display",
+      "specifications": {
+        "Màn hình": "11 inch, Liquid Retina IPS LCD, 2388 x 1668 pixels, 120Hz",
+        "Chip xử lý": "Apple M2 8 nhân CPU, 10 nhân GPU",
+        "RAM": "8 GB",
+        "Bộ nhớ trong": "256 GB",
+        "Camera sau": "12 MP Wide, 10 MP Ultra Wide",
+        "Camera trước": "12 MP TrueDepth",
+        "Pin": "28.65Wh, Sử dụng lên đến 10 giờ",
+        "Hệ điều hành": "iPadOS 17",
+        "Đặc biệt": "Hỗ trợ Apple Pencil (thế hệ 2), Magic Keyboard"
+      },
+      "detailedDescription": "iPad Pro M2 11 inch mang đến hiệu năng desktop trong thân hình tablet siêu mỏng nhẹ. Chip M2 mạnh mẽ xử lý mượt mà mọi tác vụ từ vẽ digital art với Apple Pencil đến chỉnh sửa video 4K. Màn hình Liquid Retina 120Hz cho trải nghiệm mượt mà, hỗ trợ P3 wide color và True Tone."
+    },
+    {
+      "id": "samsung-tab-s9",
+      "name": "Samsung Galaxy Tab S9+ 5G 256GB",
+      "price": 24990000,
+      "originalPrice": 27990000,
+      "image": "/placeholder.svg?height=400&width=400",
+      "category": "Tablet",
+      "rating": 4,
+      "inStock": true,
+      "description": "Snapdragon 8 Gen 2, S Pen, AMOLED",
+      "specifications": {
+        "Màn hình": "12.4 inch, Dynamic AMOLED 2X, 2800 x 1752 pixels, 120Hz",
+        "Chip xử lý": "Snapdragon 8 Gen 2 for Galaxy",
+        "RAM": "12 GB",
+        "Bộ nhớ trong": "256 GB",
+        "Camera sau": "13 MP Wide, 8 MP Ultra Wide",
+        "Camera trước": "12 MP",
+        "Pin": "10090 mAh, Sạc nhanh 45W",
+        "Hệ điều hành": "Android 13, One UI 5.1.1",
+        "Đặc biệt": "S Pen đi kèm, Chống nước IP68"
+      },
+      "detailedDescription": "Galaxy Tab S9+ là tablet Android cao cấp với màn hình AMOLED 12.4 inch tuyệt đẹp, hiệu năng mạnh mẽ và bút S Pen đi kèm. Thiết kế kim loại cao cấp với khả năng chống nước IP68 độc đáo. Pin 10090mAh cho thời gian sử dụng cực lâu, phù hợp cho cả giải trí và làm việc."
+    },
+    {
+      "id": "airpods-pro-2",
+      "name": "AirPods Pro 2 USB-C",
+      "price": 6490000,
+      "originalPrice": 7490000,
+      "image": "/placeholder.svg?height=400&width=400",
+      "category": "Phụ kiện",
+      "rating": 5,
+      "inStock": true,
+      "description": "Chống ồn chủ động, USB-C",
+      "specifications": {
+        "Loại tai nghe": "True Wireless, In-ear",
+        "Kết nối": "Bluetooth 5.3",
+        "Chip": "Apple H2",
+        "Chống ồn": "Active Noise Cancellation (ANC)",
+        "Thời lượng pin": "6 giờ (tai nghe), 30 giờ (với hộp sạc)",
+        "Sạc": "USB-C, MagSafe, Qi wireless",
+        "Chống nước": "IPX4",
+        "Đặc biệt": "Spatial Audio, Adaptive Audio, Conversation Awareness"
+      },
+      "detailedDescription": "AirPods Pro 2 với cổng USB-C mang đến chất lượng âm thanh vượt trội với chip H2 mới, khả năng chống ồn chủ động gấp đôi thế hệ trước. Tính năng Adaptive Audio tự động điều chỉnh mức chống ồn phù hợp với môi trường xung quanh. Hộp sạc tích hợp loa để dễ dàng tìm kiếm với Find My."
+    },
+    {
+      "id": "sony-wh1000xm5",
+      "name": "Sony WH-1000XM5 Wireless Headphones",
+      "price": 8990000,
+      "originalPrice": 9990000,
+      "image": "/placeholder.svg?height=400&width=400",
+      "category": "Phụ kiện",
+      "rating": 5,
+      "inStock": true,
+      "description": "Chống ồn hàng đầu, 30h pin",
+      "specifications": {
+        "Loại tai nghe": "Over-ear, Wireless",
+        "Kết nối": "Bluetooth 5.2, NFC, Jack 3.5mm",
+        "Chip": "Integrated Processor V1 + QN1",
+        "Chống ồn": "Active Noise Cancellation 8 microphones",
+        "Thời lượng pin": "30 giờ (ANC bật), 40 giờ (ANC tắt)",
+        "Sạc": "USB-C, Sạc nhanh 3 phút = 3 giờ",
+        "Trọng lượng": "250g",
+        "Đặc biệt": "LDAC, DSEE Extreme, Multipoint connection"
+      },
+      "detailedDescription": "Sony WH-1000XM5 là tai nghe chống ồn tốt nhất hiện nay với 8 microphone và 2 chip xử lý mang đến khả năng chống ồn vượt trội. Thiết kế mới nhẹ hơn, êm hơn với đệm tai mềm mại. Chất lượng âm thanh Hi-Res với công nghệ LDAC và DSEE Extreme nâng cấp chất lượng nhạc số."
+    },
+    {
+      "id": "logitech-mx-master-3s",
+      "name": "Logitech MX Master 3S Wireless Mouse",
+      "price": 2490000,
+      "originalPrice": 2990000,
+      "image": "/placeholder.svg?height=400&width=400",
+      "category": "Phụ kiện",
+      "rating": 5,
+      "inStock": true,
+      "description": "8K DPI, Quiet Clicks, USB-C",
+      "specifications": {
+        "Loại chuột": "Wireless, Ergonomic",
+        "Cảm biến": "Darkfield 8000 DPI",
+        "Kết nối": "Bluetooth, USB Receiver Logi Bolt",
+        "Pin": "70 ngày (sạc đầy), Sạc nhanh USB-C",
+        "Nút bấm": "7 nút có thể tùy chỉnh",
+        "Tương thích": "Windows, macOS, Linux, iPadOS",
+        "Đặc biệt": "MagSpeed scroll wheel, Quiet clicks, Multi-device"
+      },
+      "detailedDescription": "Logitech MX Master 3S là chuột không dây cao cấp dành cho người làm việc chuyên nghiệp với thiết kế ergonomic thoải mái, nút bấm êm ái và bánh cuộn MagSpeed chính xác. Kết nối đa thiết bị cho phép chuyển đổi giữa 3 máy tính dễ dàng. Pin sử dụng lên đến 70 ngày và sạc nhanh qua USB-C."
+    },
+    {
+      "id": "keychron-k8-pro",
+      "name": "Keychron K8 Pro Mechanical Keyboard",
+      "price": 3290000,
+      "originalPrice": null,
+      "image": "/placeholder.svg?height=400&width=400",
+      "category": "Phụ kiện",
+      "rating": 4,
+      "inStock": true,
+      "description": "Hot-swappable, RGB, Wireless",
+      "specifications": {
+        "Loại bàn phím": "Mechanical, TKL (87 phím)",
+        "Switch": "Gateron G Pro (Hot-swappable)",
+        "Kết nối": "Bluetooth 5.1, USB-C có dây",
+        "Pin": "4000mAh, Sử dụng lên đến 240 giờ",
+        "Đèn LED": "RGB South-facing",
+        "Tương thích": "Windows, macOS, Linux",
+        "Đặc biệt": "QMK/VIA programmable, Gasket mount, PBT keycaps"
+      },
+      "detailedDescription": "Keychron K8 Pro là bàn phím cơ cao cấp với khả năng hot-swap switch, lập trình QMK/VIA và thiết kế gasket mount cho trải nghiệm gõ êm ái. Kết nối không dây Bluetooth hoặc có dây USB-C linh hoạt. Keycaps PBT double-shot bền đẹp, đèn RGB tùy chỉnh và tương thích đa nền tảng."
+    },
+    {
+      "id": "anker-powerbank",
+      "name": "Anker PowerCore 20000mAh PD 30W",
+      "price": 1290000,
+      "originalPrice": 1590000,
+      "image": "/placeholder.svg?height=400&width=400",
+      "category": "Phụ kiện",
+      "rating": 4,
+      "inStock": true,
+      "description": "Sạc nhanh PD 30W, 20000mAh",
+      "specifications": {
+        "Dung lượng": "20000mAh (74Wh)",
+        "Cổng sạc": "1x USB-C PD 30W, 2x USB-A 18W",
+        "Sạc nhanh": "Power Delivery 3.0, Quick Charge 3.0",
+        "Đầu vào": "USB-C 18W",
+        "Thời gian sạc đầy": "6-7 giờ (adapter 18W)",
+        "Trọng lượng": "360g",
+        "Đặc biệt": "MultiProtect safety system, LED indicator"
+      },
+      "detailedDescription": "Anker PowerCore 20000mAh là pin sạc dự phòng dung lượng lớn với công nghệ sạc nhanh Power Delivery 30W, có thể sạc đầy iPhone trong 30 phút hoặc MacBook Air trong 2 giờ. Thiết kế nhỏ gọn với 3 cổng sạc cho phép sạc đồng thời nhiều thiết bị. Hệ thống an toàn MultiProtect bảo vệ thiết bị khỏi quá nhiệt và quá tải."
+    },
+    {
+      "id": "xiaomi-14-ultra",
+      "name": "Xiaomi 14 Ultra 16GB/512GB",
+      "price": 27990000,
+      "originalPrice": 29990000,
+      "image": "/placeholder.svg?height=400&width=400",
+      "category": "Điện thoại",
+      "rating": 5,
+      "inStock": false,
+      "description": "Snapdragon 8 Gen 3, Camera Leica",
+      "specifications": {
+        "Màn hình": "6.73 inch, AMOLED LTPO, 3200 x 1440 pixels, 120Hz",
+        "Chip xử lý": "Snapdragon 8 Gen 3",
+        "RAM": "16 GB LPDDR5X",
+        "Bộ nhớ trong": "512 GB UFS 4.0",
+        "Camera sau": "4 camera 50MP (Wide, Ultra Wide, 2x Tele, 5x Tele) Leica",
+        "Camera trước": "32 MP",
+        "Pin": "5000 mAh, Sạc nhanh 90W, Sạc không dây 80W",
+        "Hệ điều hành": "Android 14, HyperOS",
+        "Đặc biệt": "Leica Professional Photography, IP68"
+      },
+      "detailedDescription": "Xiaomi 14 Ultra là smartphone camera phone hàng đầu với hệ thống 4 camera 50MP được phát triển cùng Leica, mang đến chất lượng ảnh chuyên nghiệp. Chip Snapdragon 8 Gen 3 mạnh mẽ nhất hiện nay cùng 16GB RAM cho hiệu năng đỉnh cao. Màn hình AMOLED LTPO 2K 120Hz tuyệt đẹp và sạc siêu nhanh 90W."
+    }
+  ]
+}
