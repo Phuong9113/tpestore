@@ -39,8 +39,10 @@ export default function RegisterPage() {
     }
     setLoading(true);
     try {
-      const { token } = await apiRegister(formData.name, formData.email, formData.password);
+      const { token, user } = await apiRegister(formData.name, formData.email, formData.password);
       setToken(token);
+      
+      // New users are always CUSTOMER role, redirect to home
       router.push("/");
     } catch (err) {
       setError("Đăng ký thất bại, email có thể đã tồn tại");

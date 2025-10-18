@@ -10,10 +10,12 @@ import {
   PlusIcon,
   TrashIcon,
   XMarkIcon,
+  CogIcon,
 } from "@heroicons/react/24/outline"
 import Link from "next/link"
 import { me, updateMe, type AuthUser } from "@/lib/auth"
 import Image from "next/image"
+import ProtectedRoute from "@/components/ProtectedRoute"
 
 interface UserProfile {
   name: string
@@ -82,7 +84,7 @@ interface OrderDetail {
 
 type TabType = "profile" | "orders" | "addresses" | "payment"
 
-export default function ProfilePage() {
+function ProfilePageContent() {
   const [activeTab, setActiveTab] = useState<TabType>("profile")
   const [isEditing, setIsEditing] = useState(false)
   const [authUser, setAuthUser] = useState<AuthUser | null>(null)
@@ -312,18 +314,6 @@ export default function ProfilePage() {
     return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Đang tải...</div>
   }
 
-  if (!authUser) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="bg-card border border-border rounded-xl p-8 text-center">
-          <h1 className="text-2xl font-bold text-foreground mb-2">Cần đăng nhập</h1>
-          <p className="text-muted-foreground mb-4">Vui lòng đăng nhập để xem thông tin cá nhân</p>
-          <Link href="/login" className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90">Đăng nhập</Link>
-        </div>
-      </div>
-    )
-  }
-
   return (
     <div className="min-h-screen bg-secondary/30">
       {selectedOrder && (
@@ -476,6 +466,15 @@ export default function ProfilePage() {
                 </div>
                 <h2 className="text-xl font-bold text-foreground">{profile.name || authUser.email}</h2>
                 <p className="text-sm text-muted-foreground">{profile.email}</p>
+                <div className="mt-2">
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    authUser.role === "ADMIN" 
+                      ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400" 
+                      : "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                  }`}>
+                    {authUser.role === "ADMIN" ? "Quản trị viên" : "Khách hàng"}
+                  </span>
+                </div>
               </div>
 
               <nav className="space-y-2">
@@ -521,6 +520,17 @@ export default function ProfilePage() {
                   <CreditCardIcon className="w-5 h-5" />
                   Phương thức thanh toán
                 </button>
+                
+                {/* Admin Dashboard Link - Only show for ADMIN role */}
+                {authUser.role === "ADMIN" && (
+                  <Link
+                    href="/admin"
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-colors hover:bg-secondary text-foreground"
+                  >
+                    <CogIcon className="w-5 h-5" />
+                    Dashboard Admin
+                  </Link>
+                )}
               </nav>
             </div>
           </div>
@@ -770,5 +780,13 @@ export default function ProfilePage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function ProfilePage() {
+  return (
+    <ProtectedRoute>
+      <ProfilePageContent />
+    </ProtectedRoute>
   )
 }

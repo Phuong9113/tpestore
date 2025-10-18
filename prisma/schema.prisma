@@ -11,7 +11,6 @@ datasource db {
 enum Role {
   CUSTOMER
   ADMIN
-  SELLER
 }
 
 enum OrderStatus {
@@ -35,35 +34,58 @@ model User {
   orders    Order[]     @relation("UserOrders")
   cartItems CartItem[]  @relation("UserCartItems")
   reviews   Review[]    @relation("UserReviews")
-  products  Product[]   @relation("SellerProducts")
+  interactions ProductInteraction[] // dùng cho gợi ý sản phẩm
 }
 
 model Category {
-  id          String    @id @default(cuid())
+  id          String             @id @default(cuid())
   name        String
   description String?
+  createdAt   DateTime           @default(now())
 
-  products    Product[] @relation("CategoryProducts")
+  // Relations
+  products    Product[]          @relation("CategoryProducts")
+  specFields  SpecField[]        @relation("CategorySpecFields") // thông số kĩ thuật mặc định cho danh mục
+}
+
+model SpecField {
+  id          String     @id @default(cuid())
+  name        String     // ví dụ: "CPU", "RAM", "Màn hình"
+  unit        String?    // ví dụ: "GB", "inch"
+  categoryId  String
+
+  category    Category   @relation("CategorySpecFields", fields: [categoryId], references: [id], onDelete: Cascade)
+  values      SpecValue[]@relation("SpecFieldValues") // giá trị thực tế từng sản phẩm lưu ở đây
 }
 
 model Product {
-  id          String    @id @default(cuid())
+  id          String      @id @default(cuid())
   name        String
   description String
   price       Float
   stock       Int
   image       String
   categoryId  String
-  sellerId    String
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
 
   // Relations
-  category    Category   @relation("CategoryProducts", fields: [categoryId], references: [id], onDelete: Cascade)
-  seller      User       @relation("SellerProducts", fields: [sellerId], references: [id], onDelete: Cascade)
-  cartItems   CartItem[] @relation("ProductCartItems")
-  reviews     Review[]   @relation("ProductReviews")
-  orderItems  OrderItem[]@relation("ProductOrderItems")
+  category    Category     @relation("CategoryProducts", fields: [categoryId], references: [id], onDelete: Cascade)
+  cartItems   CartItem[]   @relation("ProductCartItems")
+  reviews     Review[]     @relation("ProductReviews")
+  orderItems  OrderItem[]  @relation("ProductOrderItems")
+  specs       SpecValue[]  @relation("ProductSpecValues") // thông số kỹ thuật cụ thể
+  interactions ProductInteraction[] // dùng cho gợi ý sản phẩm
+}
+
+model SpecValue {
+  id          String     @id @default(cuid())
+  productId   String
+  specFieldId String
+  value       String     // ví dụ: "Intel Core i7", "16GB", "15.6 inch"
+
+  product     Product    @relation("ProductSpecValues", fields: [productId], references: [id], onDelete: Cascade)
+  specField   SpecField  @relation("SpecFieldValues", fields: [specFieldId], references: [id], onDelete: Cascade)
 }
 
 model CartItem {
@@ -110,4 +132,17 @@ model Review {
 
   product Product @relation("ProductReviews", fields: [productId], references: [id], onDelete: Cascade)
   user    User    @relation("UserReviews", fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ProductInteraction {
+  id        String   @id @default(cuid())
+  userId    String
+  productId String
+  viewedAt  DateTime @default(now())
+  liked     Boolean  @default(false)
+  addedToCart Boolean @default(false)
+  purchased Boolean  @default(false)
+
+  user      User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product   Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
 }

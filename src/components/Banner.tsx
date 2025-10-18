@@ -22,7 +22,7 @@ export default function Banner() {
                 <Link href="/products">Mua sắm ngay</Link>
               </Button>
               <Button asChild size="lg" variant="outline" className="text-base bg-transparent">
-                <Link href="/products?category=phone">Xem điện thoại</Link>
+                <Link href="/products?category=phone">Xem sản phẩm mới nhất</Link>
               </Button>
             </div>
           </div>
@@ -30,7 +30,7 @@ export default function Banner() {
           {/* Hero Image */}
           <div className="relative">
             <div className="aspect-square rounded-2xl overflow-hidden bg-secondary/50 backdrop-blur">
-              <img src="/modern-smartphone-and-laptop-on-desk-with-tech-aes.jpg" alt="Latest electronics" className="w-full h-full object-cover" />
+              <img src="/banner/banner.jpeg" alt="Banner" className="w-full h-full object-cover" />
             </div>
             {/* Floating badge */}
             <div className="absolute -bottom-4 -left-4 bg-card border border-border rounded-xl p-4 shadow-lg">
@@ -39,11 +39,11 @@ export default function Banner() {
                   <span className="text-2xl">🎉</span>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Giảm giá đến</p>
-                  <p className="text-xl font-bold text-accent">30%</p>
+                  <p className="text-sm font-medium text-black">Nhiều sản phẩm giảm giá đến</p>
+                  <p className="text-xl font-extrabold text-black">30%</p>
                 </div>
               </div>
-            </div>
+            </div>  
           </div>
         </div>
       </div>

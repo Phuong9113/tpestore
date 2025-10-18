@@ -28,9 +28,15 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
     try {
-      const { token } = await login(formData.email, formData.password);
+      const { token, user } = await login(formData.email, formData.password);
       setToken(token);
-      router.push("/");
+      
+      // Redirect based on user role
+      if (user.role === "ADMIN") {
+        router.push("/admin");
+      } else {
+        router.push("/");
+      }
     } catch (err) {
       setError("Email hoặc mật khẩu không đúng");
     } finally {

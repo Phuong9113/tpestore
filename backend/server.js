@@ -45,7 +45,18 @@ app.get('/', (req, res) => {
 });
 
 app.get('/api', (req, res) => {
-  res.json({ endpoints: ['/api/users', '/api/products', '/api/products/:id', '/api/health', '/api/auth/register', '/api/auth/login', '/api/auth/me'] });
+  res.json({ 
+    endpoints: [
+      '/api/health',
+      '/api/auth/register', '/api/auth/login', '/api/auth/me',
+      '/api/users',
+      '/api/products', '/api/products/:id', 
+      '/api/categories', '/api/categories/:id',
+      '/api/cart', '/api/orders', '/api/orders/:id',
+      '/api/products/:productId/reviews',
+      '/api/products/:productId/interact', '/api/recommendations'
+    ] 
+  });
 });
 
 app.get('/api/health', async (req, res) => {
@@ -138,7 +149,18 @@ app.get('/api/products', async (req, res) => {
     const products = await prisma.product.findMany({
       include: {
         category: true,
-        seller: true
+        specs: {
+          include: {
+            specField: true
+          }
+        },
+        reviews: {
+          include: {
+            user: {
+              select: { id: true, name: true }
+            }
+          }
+        }
       }
     });
     res.json(products);
@@ -158,14 +180,68 @@ app.get('/api/products/:id', async (req, res) => {
       where: { id },
       include: {
         category: true,
-        seller: true,
+        specs: {
+          include: {
+            specField: true
+          }
+        },
         reviews: {
-          include: { user: true }
+          include: {
+            user: {
+              select: { id: true, name: true }
+            }
+          }
         }
       }
     });
     if (!product) return res.status(404).json({ error: 'Product not found' });
     res.json(product);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+// ================================
+// Categories API
+// ================================
+app.get('/api/categories', async (req, res) => {
+  try {
+    const categories = await prisma.category.findMany({
+      include: {
+        products: {
+          select: { id: true, name: true, price: true, image: true }
+        },
+        specFields: true
+      }
+    });
+    res.json(categories);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+app.get('/api/categories/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const category = await prisma.category.findUnique({
+      where: { id },
+      include: {
+        products: {
+          include: {
+            specs: {
+              include: {
+                specField: true
+              }
+            }
+          }
+        },
+        specFields: true
+      }
+    });
+    if (!category) return res.status(404).json({ error: 'Category not found' });
+    res.json(category);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Internal Server Error' });
@@ -255,6 +331,301 @@ app.delete('/api/cart', async (req, res) => {
     if (!req.user?.id) return res.status(401).json({ error: 'Unauthorized' });
     await prisma.cartItem.deleteMany({ where: { userId: req.user.id } });
     res.json({ ok: true });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+// ================================
+// Orders API (auth required)
+// ================================
+app.get('/api/orders', async (req, res) => {
+  try {
+    if (!req.user?.id) return res.status(401).json({ error: 'Unauthorized' });
+    const orders = await prisma.order.findMany({
+      where: { userId: req.user.id },
+      include: {
+        orderItems: {
+          include: {
+            product: {
+              select: { id: true, name: true, image: true, price: true }
+            }
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json(orders);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+app.get('/api/orders/:id', async (req, res) => {
+  try {
+    if (!req.user?.id) return res.status(401).json({ error: 'Unauthorized' });
+    const { id } = req.params;
+    const order = await prisma.order.findFirst({
+      where: { id, userId: req.user.id },
+      include: {
+        orderItems: {
+          include: {
+            product: {
+              select: { id: true, name: true, image: true, price: true }
+            }
+          }
+        }
+      }
+    });
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+    res.json(order);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+app.post('/api/orders', async (req, res) => {
+  try {
+    if (!req.user?.id) return res.status(401).json({ error: 'Unauthorized' });
+    const { items } = req.body; // [{ productId, quantity, price }]
+    
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: 'Invalid order items' });
+    }
+
+    // Calculate total price
+    const totalPrice = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+    // Create order with items
+    const order = await prisma.order.create({
+      data: {
+        userId: req.user.id,
+        totalPrice,
+        status: 'PENDING',
+        orderItems: {
+          create: items.map(item => ({
+            productId: item.productId,
+            quantity: item.quantity,
+            price: item.price
+          }))
+        }
+      },
+      include: {
+        orderItems: {
+          include: {
+            product: {
+              select: { id: true, name: true, image: true, price: true }
+            }
+          }
+        }
+      }
+    });
+
+    // Clear cart after successful order
+    await prisma.cartItem.deleteMany({ where: { userId: req.user.id } });
+
+    res.status(201).json(order);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+app.patch('/api/orders/:id/status', async (req, res) => {
+  try {
+    if (!req.user?.id) return res.status(401).json({ error: 'Unauthorized' });
+    const { id } = req.params;
+    const { status } = req.body;
+    
+    if (!['PENDING', 'PAID', 'SHIPPED', 'COMPLETED', 'CANCELLED'].includes(status)) {
+      return res.status(400).json({ error: 'Invalid status' });
+    }
+
+    const order = await prisma.order.findFirst({
+      where: { id, userId: req.user.id }
+    });
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+
+    const updatedOrder = await prisma.order.update({
+      where: { id },
+      data: { status },
+      include: {
+        orderItems: {
+          include: {
+            product: {
+              select: { id: true, name: true, image: true, price: true }
+            }
+          }
+        }
+      }
+    });
+
+    res.json(updatedOrder);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+// ================================
+// Reviews API
+// ================================
+app.get('/api/products/:productId/reviews', async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const reviews = await prisma.review.findMany({
+      where: { productId },
+      include: {
+        user: {
+          select: { id: true, name: true }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json(reviews);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+app.post('/api/products/:productId/reviews', async (req, res) => {
+  try {
+    if (!req.user?.id) return res.status(401).json({ error: 'Unauthorized' });
+    const { productId } = req.params;
+    const { rating, comment } = req.body;
+    
+    if (!rating || rating < 1 || rating > 5) {
+      return res.status(400).json({ error: 'Rating must be between 1 and 5' });
+    }
+
+    // Check if user already reviewed this product
+    const existingReview = await prisma.review.findFirst({
+      where: { productId, userId: req.user.id }
+    });
+    if (existingReview) {
+      return res.status(409).json({ error: 'You have already reviewed this product' });
+    }
+
+    const review = await prisma.review.create({
+      data: {
+        productId,
+        userId: req.user.id,
+        rating,
+        comment
+      },
+      include: {
+        user: {
+          select: { id: true, name: true }
+        }
+      }
+    });
+
+    res.status(201).json(review);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+// ================================
+// Product Interactions API (for recommendations)
+// ================================
+app.post('/api/products/:productId/interact', async (req, res) => {
+  try {
+    if (!req.user?.id) return res.status(401).json({ error: 'Unauthorized' });
+    const { productId } = req.params;
+    const { action } = req.body; // 'view', 'like', 'addToCart', 'purchase'
+    
+    const validActions = ['view', 'like', 'addToCart', 'purchase'];
+    if (!validActions.includes(action)) {
+      return res.status(400).json({ error: 'Invalid action' });
+    }
+
+    // Find existing interaction or create new one
+    let interaction = await prisma.productInteraction.findFirst({
+      where: { productId, userId: req.user.id }
+    });
+
+    if (!interaction) {
+      interaction = await prisma.productInteraction.create({
+        data: {
+          productId,
+          userId: req.user.id,
+          viewedAt: new Date(),
+          liked: action === 'like',
+          addedToCart: action === 'addToCart',
+          purchased: action === 'purchase'
+        }
+      });
+    } else {
+      // Update existing interaction
+      const updateData = { viewedAt: new Date() };
+      if (action === 'like') updateData.liked = true;
+      if (action === 'addToCart') updateData.addedToCart = true;
+      if (action === 'purchase') updateData.purchased = true;
+
+      interaction = await prisma.productInteraction.update({
+        where: { id: interaction.id },
+        data: updateData
+      });
+    }
+
+    res.json(interaction);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+app.get('/api/recommendations', async (req, res) => {
+  try {
+    if (!req.user?.id) return res.status(401).json({ error: 'Unauthorized' });
+    
+    // Get user's interaction history
+    const userInteractions = await prisma.productInteraction.findMany({
+      where: { userId: req.user.id },
+      include: { product: true }
+    });
+
+    // Simple recommendation: products from same categories as liked/purchased items
+    const likedCategories = userInteractions
+      .filter(i => i.liked || i.purchased)
+      .map(i => i.product.categoryId);
+
+    if (likedCategories.length === 0) {
+      // If no interactions, return popular products
+      const popularProducts = await prisma.product.findMany({
+        take: 10,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          category: true,
+          specs: {
+            include: { specField: true }
+          }
+        }
+      });
+      return res.json(popularProducts);
+    }
+
+    const recommendations = await prisma.product.findMany({
+      where: {
+        categoryId: { in: likedCategories },
+        id: { notIn: userInteractions.map(i => i.productId) }
+      },
+      take: 10,
+      include: {
+        category: true,
+        specs: {
+          include: { specField: true }
+        }
+      }
+    });
+
+    res.json(recommendations);
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: 'Internal Server Error' });

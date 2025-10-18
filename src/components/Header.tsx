@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { ShoppingCartIcon, UserIcon, MagnifyingGlassIcon, ChevronDownIcon } from "@heroicons/react/24/outline"
+import { ShoppingCartIcon, UserIcon, MagnifyingGlassIcon, ChevronDownIcon, CogIcon } from "@heroicons/react/24/outline"
 import Navbar from "./Navbar"
 import { useCart } from "@/contexts/CartContext"
 import { useEffect, useState } from "react"
@@ -35,9 +35,11 @@ export default function Header() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-lg">T</span>
-            </div>
+            <img
+              src="/logo/logo.png"
+              alt="TPE Store Logo"
+              className="w-8 h-8 object-contain"
+            />
             <span className="text-xl font-bold text-foreground">TPE Store</span>
           </Link>
 
@@ -91,9 +93,6 @@ export default function Header() {
                   <div className="absolute right-0 mt-2 w-48 bg-background border border-border rounded-lg shadow-lg py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
                     {user ? (
                       <>
-                        <div className="px-4 py-2 text-sm text-muted-foreground">
-                          {user.email}
-                        </div>
                         <Link
                           href="/profile"
                           className="block px-4 py-2 text-sm text-foreground hover:bg-secondary transition-colors"
@@ -101,6 +100,15 @@ export default function Header() {
                         >
                           Thông tin cá nhân
                         </Link>
+                        {user.role === "ADMIN" && (
+                          <Link
+                            href="/admin"
+                            className="block px-4 py-2 text-sm text-foreground hover:bg-secondary transition-colors"
+                            onClick={() => setShowAccountMenu(false)}
+                          >
+                            Dashboard Admin
+                          </Link>
+                        )}
                         <button
                           className="w-full text-left px-4 py-2 text-sm text-foreground hover:bg-secondary transition-colors"
                           onClick={() => {
@@ -127,14 +135,6 @@ export default function Header() {
                           onClick={() => setShowAccountMenu(false)}
                         >
                           Đăng ký
-                        </Link>
-                        <div className="border-t border-border my-2" />
-                        <Link
-                          href="/profile"
-                          className="block px-4 py-2 text-sm text-foreground hover:bg-secondary transition-colors"
-                          onClick={() => setShowAccountMenu(false)}
-                        >
-                          Thông tin cá nhân
                         </Link>
                       </>
                     )}

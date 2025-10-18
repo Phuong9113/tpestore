@@ -1,8 +1,29 @@
 "use client"
 
-import { MagnifyingGlassIcon, BellIcon, UserCircleIcon } from "@heroicons/react/24/outline"
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
+import { MagnifyingGlassIcon, BellIcon, UserCircleIcon, ChevronDownIcon, ArrowRightOnRectangleIcon } from "@heroicons/react/24/outline"
+import { me, clearToken, type AuthUser } from "@/lib/auth"
 
 export default function AdminHeader() {
+  const [user, setUser] = useState<AuthUser | null>(null)
+  const [showUserMenu, setShowUserMenu] = useState(false)
+  const router = useRouter()
+
+  useEffect(() => {
+    const loadUser = async () => {
+      const u = await me()
+      setUser(u)
+    }
+    loadUser()
+  }, [])
+
+  const handleLogout = () => {
+    clearToken()
+    setUser(null)
+    router.push('/')
+  }
+
   return (
     <header className="h-16 bg-card border-b border-border flex items-center justify-between px-6">
       {/* Search */}
@@ -23,10 +44,49 @@ export default function AdminHeader() {
           <BellIcon className="w-6 h-6" />
           <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
         </button>
-        <button className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
-          <UserCircleIcon className="w-8 h-8" />
-          <span className="text-sm font-medium">Admin</span>
-        </button>
+        
+        {/* User Menu */}
+        <div className="relative">
+          <button 
+            onClick={() => setShowUserMenu(!showUserMenu)}
+            className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <UserCircleIcon className="w-8 h-8" />
+            <div className="text-left">
+              <div className="text-sm font-medium">{user?.name || user?.email || 'Admin'}</div>
+              <div className="text-xs text-muted-foreground">Quản trị viên</div>
+            </div>
+            <ChevronDownIcon className="w-4 h-4" />
+          </button>
+
+          {/* Dropdown Menu */}
+          {showUserMenu && (
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setShowUserMenu(false)} />
+              <div className="absolute right-0 mt-2 w-48 bg-background border border-border rounded-lg shadow-lg py-2 z-50">
+                <button
+                  onClick={() => {
+                    router.push('/profile')
+                    setShowUserMenu(false)
+                  }}
+                  className="w-full text-left px-4 py-2 text-sm text-foreground hover:bg-secondary transition-colors"
+                >
+                  Thông tin cá nhân
+                </button>
+                <button
+                  onClick={() => {
+                    handleLogout()
+                    setShowUserMenu(false)
+                  }}
+                  className="w-full text-left px-4 py-2 text-sm text-foreground hover:bg-secondary transition-colors flex items-center gap-2"
+                >
+                  <ArrowRightOnRectangleIcon className="w-4 h-4" />
+                  Đăng xuất
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </header>
   )
