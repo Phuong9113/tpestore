@@ -13,8 +13,8 @@ import {
 
 const navigation = [
   { name: "Tổng quan", href: "/admin", icon: HomeIcon },
-  { name: "Sản phẩm", href: "/admin/products", icon: ShoppingBagIcon },
   { name: "Danh mục", href: "/admin/categories", icon: TagIcon },
+  { name: "Sản phẩm", href: "/admin/products", icon: ShoppingBagIcon },
   { name: "Người dùng", href: "/admin/users", icon: UsersIcon },
   { name: "Đơn hàng", href: "/admin/orders", icon: ClipboardDocumentListIcon },
   { name: "Thống kê", href: "/admin/analytics", icon: ChartBarIcon },

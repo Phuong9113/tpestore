@@ -2,10 +2,13 @@ import Banner from "@/components/Banner"
 import ProductCard from "@/components/ProductCard"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import { fetchProducts } from "@/lib/api"
+import { fetchProducts, fetchCategories } from "@/lib/api"
 
 export default async function HomePage() {
-  const allProducts = await fetchProducts()
+  const [allProducts, categories] = await Promise.all([
+    fetchProducts(),
+    fetchCategories()
+  ])
   const featuredProducts = allProducts.slice(0, 8)
 
   return (
@@ -14,7 +17,7 @@ export default async function HomePage() {
       <Banner />
 
       {/* Featured Products Section */}
-      <section className="container mx-auto px-4 py-16">
+      <section className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8">
           <div>
             <h2 className="text-3xl font-bold text-foreground mb-2">Sản phẩm nổi bật</h2>
@@ -48,15 +51,10 @@ export default async function HomePage() {
           <h2 className="text-3xl font-bold text-foreground mb-8 text-center">Danh mục sản phẩm</h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[
-              { name: "Điện thoại", image: "/modern-smartphone.png", href: "/products?category=phone" },
-              { name: "Laptop", image: "/modern-laptop.png", href: "/products?category=laptop" },
-              { name: "Tablet", image: "/modern-tablet.png", href: "/products?category=tablet" },
-              { name: "Phụ kiện", image: "/tech-accessories-headphones.jpg", href: "/products?category=accessories" },
-            ].map((category) => (
+            {categories.slice(0, 4).map((category) => (
               <Link
-                key={category.name}
-                href={category.href}
+                key={category.id}
+                href={`/products?category=${category.id}`}
                 className="group relative aspect-square rounded-xl overflow-hidden bg-card border border-border hover:shadow-lg transition-all"
               >
                 <img

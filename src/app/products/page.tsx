@@ -4,12 +4,13 @@ import { Suspense, useEffect, useState } from "react"
 import ProductCard from "@/components/ProductCard"
 import { Button } from "@/components/ui/button"
 import { FunnelIcon } from "@heroicons/react/24/outline"
-import { fetchProducts, type UiProduct } from "@/lib/api"
+import { fetchProducts, fetchCategories, type UiProduct, type ApiCategory } from "@/lib/api"
 
 function ProductsContent() {
   const [selectedCategory, setSelectedCategory] = useState<string>("all")
   const [sortBy, setSortBy] = useState<string>("featured")
   const [products, setProducts] = useState<UiProduct[]>([])
+  const [categories, setCategories] = useState<ApiCategory[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string>("")
 
@@ -17,8 +18,14 @@ function ProductsContent() {
     let mounted = true
     ;(async () => {
       try {
-        const data = await fetchProducts()
-        if (mounted) setProducts(data)
+        const [productsData, categoriesData] = await Promise.all([
+          fetchProducts(),
+          fetchCategories()
+        ])
+        if (mounted) {
+          setProducts(productsData)
+          setCategories(categoriesData)
+        }
       } catch (e) {
         if (mounted) setError("Không tải được danh sách sản phẩm")
       } finally {
@@ -30,21 +37,17 @@ function ProductsContent() {
     }
   }, [])
 
-  const categories = [
+  const allCategories = [
     { id: "all", name: "Tất cả" },
-    { id: "phone", name: "Điện thoại" },
-    { id: "laptop", name: "Laptop" },
-    { id: "tablet", name: "Tablet" },
-    { id: "accessories", name: "Phụ kiện" },
+    ...categories.map(cat => ({ id: cat.id, name: cat.name }))
   ]
 
   // Filter products
   let filteredProducts = products
   if (selectedCategory !== "all") {
+    const selectedCat = categories.find(cat => cat.id === selectedCategory)
     filteredProducts = filteredProducts.filter(
-      (product) =>
-        product.category.toLowerCase() === selectedCategory.toLowerCase() ||
-        product.category === getCategoryName(selectedCategory),
+      (product) => product.category === selectedCat?.name
     )
   }
 
@@ -57,15 +60,6 @@ function ProductsContent() {
     filteredProducts = [...filteredProducts].sort((a, b) => a.name.localeCompare(b.name))
   }
 
-  function getCategoryName(id: string): string {
-    const map: Record<string, string> = {
-      phone: "Điện thoại",
-      laptop: "Laptop",
-      tablet: "Tablet",
-      accessories: "Phụ kiện",
-    }
-    return map[id] || id
-  }
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -88,7 +82,7 @@ function ProductsContent() {
             <div className="mb-6">
               <h3 className="text-sm font-medium text-foreground mb-3">Danh mục</h3>
               <div className="space-y-2">
-                {categories.map((category) => (
+                {allCategories.map((category) => (
                   <button
                     key={category.id}
                     onClick={() => setSelectedCategory(category.id)}

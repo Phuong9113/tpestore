@@ -41,6 +41,7 @@ model Category {
   id          String             @id @default(cuid())
   name        String
   description String?
+  image       String?
   createdAt   DateTime           @default(now())
 
   // Relations
@@ -51,6 +52,8 @@ model Category {
 model SpecField {
   id          String     @id @default(cuid())
   name        String     // ví dụ: "CPU", "RAM", "Màn hình"
+  type        String     @default("TEXT") // TEXT, NUMBER, BOOLEAN, SELECT, MULTI_SELECT
+  required    Boolean    @default(false)
   unit        String?    // ví dụ: "GB", "inch"
   categoryId  String
 

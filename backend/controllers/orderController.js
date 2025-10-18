@@ -1,0 +1,144 @@
+import prisma from '../utils/database.js';
+import { handleError, validateRequired } from '../utils/helpers.js';
+
+export const getOrders = async (req, res) => {
+  try {
+    const orders = await prisma.order.findMany({
+      where: { userId: req.user.id },
+      include: {
+        orderItems: {
+          include: {
+            product: {
+              select: { id: true, name: true, image: true, price: true }
+            }
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+    
+    res.json(orders);
+  } catch (error) {
+    handleError(res, error);
+  }
+};
+
+export const getOrderById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const order = await prisma.order.findFirst({
+      where: { id, userId: req.user.id },
+      include: {
+        orderItems: {
+          include: {
+            product: {
+              select: { id: true, name: true, image: true, price: true }
+            }
+          }
+        }
+      }
+    });
+    
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+    
+    res.json(order);
+  } catch (error) {
+    handleError(res, error);
+  }
+};
+
+export const createOrder = async (req, res) => {
+  try {
+    const { items } = req.body;
+    
+    const validation = validateRequired(req.body, ['items']);
+    if (validation) return res.status(400).json(validation);
+    
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: 'Invalid order items' });
+    }
+    
+    // Validate each item
+    for (const item of items) {
+      if (!item.productId || !item.quantity || !item.price) {
+        return res.status(400).json({ error: 'Each item must have productId, quantity, and price' });
+      }
+    }
+    
+    // Calculate total price
+    const totalPrice = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    
+    // Create order with items
+    const order = await prisma.order.create({
+      data: {
+        userId: req.user.id,
+        totalPrice,
+        status: 'PENDING',
+        orderItems: {
+          create: items.map(item => ({
+            productId: item.productId,
+            quantity: item.quantity,
+            price: item.price
+          }))
+        }
+      },
+      include: {
+        orderItems: {
+          include: {
+            product: {
+              select: { id: true, name: true, image: true, price: true }
+            }
+          }
+        }
+      }
+    });
+    
+    // Clear cart after successful order
+    await prisma.cartItem.deleteMany({ where: { userId: req.user.id } });
+    
+    res.status(201).json(order);
+  } catch (error) {
+    handleError(res, error);
+  }
+};
+
+export const updateOrderStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    
+    const validStatuses = ['PENDING', 'PAID', 'SHIPPED', 'COMPLETED', 'CANCELLED'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ error: 'Invalid status' });
+    }
+    
+    const order = await prisma.order.findFirst({
+      where: { id, userId: req.user.id }
+    });
+    
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+    
+    const updatedOrder = await prisma.order.update({
+      where: { id },
+      data: { status },
+      include: {
+        orderItems: {
+          include: {
+            product: {
+              select: { id: true, name: true, image: true, price: true }
+            }
+          }
+        }
+      }
+    });
+    
+    res.json(updatedOrder);
+  } catch (error) {
+    handleError(res, error);
+  }
+};

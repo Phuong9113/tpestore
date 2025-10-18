@@ -211,16 +211,16 @@ export default async function ProductDetailPage({
         </div>
 
         {/* Specifications Table */}
-        {product.specifications && (
+        {product.specs && product.specs.length > 0 && (
           <div className="mt-16">
             <h2 className="text-2xl font-bold text-foreground mb-6">Thông số kỹ thuật</h2>
             <div className="bg-card border border-border rounded-xl overflow-hidden">
               <table className="w-full">
                 <tbody>
-                  {Object.entries(product.specifications).map(([key, value], index) => (
-                    <tr key={key} className={index % 2 === 0 ? "bg-secondary/30" : "bg-card"}>
-                      <td className="px-6 py-4 font-semibold text-foreground w-1/3">{key}</td>
-                      <td className="px-6 py-4 text-muted-foreground">{value}</td>
+                  {product.specs.map((spec, index) => (
+                    <tr key={spec.id} className={index % 2 === 0 ? "bg-secondary/30" : "bg-card"}>
+                      <td className="px-6 py-4 font-semibold text-foreground w-1/3">{spec.specField.name}</td>
+                      <td className="px-6 py-4 text-muted-foreground">{spec.value}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -230,12 +230,12 @@ export default async function ProductDetailPage({
         )}
 
         {/* Detailed Description */}
-        {product.detailedDescription && (
+        {product.description && (
           <div className="mt-16">
             <h2 className="text-2xl font-bold text-foreground mb-6">Mô tả chi tiết</h2>
             <div className="bg-card border border-border rounded-xl p-8 space-y-8">
               <div className="prose prose-lg max-w-none">
-                <p className="text-muted-foreground leading-relaxed text-base">{product.detailedDescription}</p>
+                <p className="text-muted-foreground leading-relaxed text-base">{product.description}</p>
               </div>
 
               {/* Product Images Gallery */}

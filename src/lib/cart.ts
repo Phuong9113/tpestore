@@ -10,7 +10,7 @@ export interface CartApiItem {
   quantity: number
 }
 
-function authHeaders() {
+function authHeaders(): HeadersInit {
   const token = getToken()
   return token ? { Authorization: `Bearer ${token}` } : {}
 }

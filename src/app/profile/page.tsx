@@ -464,15 +464,15 @@ function ProfilePageContent() {
                 <div className="w-20 h-20 bg-primary rounded-full flex items-center justify-center mb-4">
                   <UserIcon className="w-10 h-10 text-primary-foreground" />
                 </div>
-                <h2 className="text-xl font-bold text-foreground">{profile.name || authUser.email}</h2>
+                <h2 className="text-xl font-bold text-foreground">{profile.name || authUser?.email}</h2>
                 <p className="text-sm text-muted-foreground">{profile.email}</p>
                 <div className="mt-2">
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    authUser.role === "ADMIN" 
+                    authUser?.role === "ADMIN" 
                       ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400" 
                       : "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
                   }`}>
-                    {authUser.role === "ADMIN" ? "Quản trị viên" : "Khách hàng"}
+                    {authUser?.role === "ADMIN" ? "Quản trị viên" : "Khách hàng"}
                   </span>
                 </div>
               </div>
@@ -522,7 +522,7 @@ function ProfilePageContent() {
                 </button>
                 
                 {/* Admin Dashboard Link - Only show for ADMIN role */}
-                {authUser.role === "ADMIN" && (
+                {authUser?.role === "ADMIN" && (
                   <Link
                     href="/admin"
                     className="w-full flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-colors hover:bg-secondary text-foreground"

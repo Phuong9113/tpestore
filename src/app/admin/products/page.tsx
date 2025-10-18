@@ -1,38 +1,78 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { PlusIcon, PencilIcon, TrashIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline"
 import ProductModal from "@/components/admin/ProductModal"
-import products from "@/data/product.json"
+import { 
+  fetchAdminProducts, 
+  deleteProduct, 
+  fetchCategories,
+  type AdminProduct 
+} from "@/lib/api"
 
 export default function ProductsPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("all")
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [editingProduct, setEditingProduct] = useState<any>(null)
+  const [editingProduct, setEditingProduct] = useState<AdminProduct | null>(null)
+  const [products, setProducts] = useState<AdminProduct[]>([])
+  const [categories, setCategories] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
 
-  const categories = ["all", ...new Set(products.products.map((p) => p.category))]
+  useEffect(() => {
+    loadData()
+  }, [searchQuery, selectedCategory])
 
-  const filteredProducts = products.products.filter((product) => {
-    const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesCategory = selectedCategory === "all" || product.category === selectedCategory
-    return matchesSearch && matchesCategory
-  })
+  const loadData = async () => {
+    try {
+      setLoading(true)
+      const [productsData, categoriesData] = await Promise.all([
+        fetchAdminProducts({
+          search: searchQuery || undefined,
+          categoryId: selectedCategory !== "all" ? selectedCategory : undefined
+        }),
+        fetchCategories()
+      ])
+      setProducts(productsData.products)
+      setCategories(categoriesData)
+    } catch (err) {
+      setError("Không thể tải dữ liệu sản phẩm")
+    } finally {
+      setLoading(false)
+    }
+  }
 
-  const handleEdit = (product: any) => {
+  const allCategories = [
+    { id: "all", name: "Tất cả danh mục" },
+    ...categories.map(cat => ({ id: cat.id, name: cat.name }))
+  ]
+
+  const handleEdit = (product: AdminProduct) => {
     setEditingProduct(product)
     setIsModalOpen(true)
   }
 
-  const handleDelete = (productId: string) => {
+  const handleDelete = async (productId: string) => {
     if (confirm("Bạn có chắc chắn muốn xóa sản phẩm này?")) {
-      console.log("Delete product:", productId)
+      try {
+        await deleteProduct(productId)
+        await loadData() // Reload data
+      } catch (err) {
+        alert("Không thể xóa sản phẩm")
+      }
     }
   }
 
   const handleAddNew = () => {
     setEditingProduct(null)
     setIsModalOpen(true)
+  }
+
+  const handleModalClose = () => {
+    setIsModalOpen(false)
+    setEditingProduct(null)
+    loadData() // Reload data after modal closes
   }
 
   return (
@@ -70,9 +110,9 @@ export default function ProductsPage() {
             onChange={(e) => setSelectedCategory(e.target.value)}
             className="px-4 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
           >
-            {categories.map((cat) => (
-              <option key={cat} value={cat}>
-                {cat === "all" ? "Tất cả danh mục" : cat}
+            {allCategories.map((cat) => (
+              <option key={cat.id} value={cat.id}>
+                {cat.name}
               </option>
             ))}
           </select>
@@ -106,7 +146,19 @@ export default function ProductsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {filteredProducts.map((product) => (
+              {loading ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-12 text-center text-muted-foreground">
+                    Đang tải...
+                  </td>
+                </tr>
+              ) : error ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-12 text-center text-red-500">
+                    {error}
+                  </td>
+                </tr>
+              ) : products.map((product) => (
                 <tr key={product.id} className="hover:bg-muted/30 transition-colors">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
@@ -123,7 +175,7 @@ export default function ProductsPage() {
                   </td>
                   <td className="px-6 py-4">
                     <span className="px-2.5 py-1 bg-primary/10 text-primary rounded-full text-xs font-medium">
-                      {product.category}
+                      {product.category?.name || "Khác"}
                     </span>
                   </td>
                   <td className="px-6 py-4">
@@ -148,7 +200,12 @@ export default function ProductsPage() {
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-1">
                       <span className="text-yellow-500">★</span>
-                      <span className="text-sm text-foreground">{product.rating}</span>
+                      <span className="text-sm text-foreground">
+                        {product.reviews?.length ? 
+                          Math.round(product.reviews.reduce((sum, r) => sum + r.rating, 0) / product.reviews.length) : 
+                          0
+                        }
+                      </span>
                     </div>
                   </td>
                   <td className="px-6 py-4">
@@ -173,7 +230,7 @@ export default function ProductsPage() {
           </table>
         </div>
 
-        {filteredProducts.length === 0 && (
+        {!loading && !error && products.length === 0 && (
           <div className="text-center py-12">
             <p className="text-muted-foreground">Không tìm thấy sản phẩm nào</p>
           </div>
@@ -181,7 +238,7 @@ export default function ProductsPage() {
       </div>
 
       {/* Product Modal */}
-      <ProductModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} product={editingProduct} />
+      <ProductModal isOpen={isModalOpen} onClose={handleModalClose} product={editingProduct} />
     </div>
   )
 }

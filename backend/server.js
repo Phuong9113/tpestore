@@ -3,6 +3,9 @@ import express from 'express';
 import cors from 'cors';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import multer from 'multer';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { PrismaClient } from '../src/generated/prisma/index.js';
 
 const app = express();
@@ -10,6 +13,38 @@ const prisma = new PrismaClient();
 
 app.use(cors());
 app.use(express.json());
+
+// Configure multer for file uploads
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const uploadDir = path.join(__dirname, '../public/uploads');
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({ 
+  storage: storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'), false);
+    }
+  }
+});
+
+// Serve static files
+app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
 // simple auth middleware will attach req.user if Authorization: Bearer <token>
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-insecure-secret';
 function authMiddleware(req, _res, next) {
@@ -216,6 +251,76 @@ app.get('/api/categories', async (req, res) => {
       }
     });
     res.json(categories);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+app.post('/api/categories', async (req, res) => {
+  try {
+    const { name, description, image, specFields = [] } = req.body;
+    
+    if (!name) {
+      return res.status(400).json({ error: 'Category name is required' });
+    }
+
+    // Check if category name already exists
+    const existingCategory = await prisma.category.findFirst({
+      where: { name: { equals: name, mode: 'insensitive' } }
+    });
+    
+    if (existingCategory) {
+      return res.status(409).json({ error: 'Category name already exists' });
+    }
+    
+    const category = await prisma.category.create({
+      data: {
+        name,
+        description,
+        image,
+        specFields: {
+          create: specFields.map(field => ({
+            name: field.name,
+            type: field.type || 'TEXT',
+            required: field.required || false
+          }))
+        }
+      },
+      include: {
+        specFields: true
+      }
+    });
+    
+    res.status(201).json(category);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+app.delete('/api/categories/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Check if category exists
+    const category = await prisma.category.findUnique({ where: { id } });
+    if (!category) {
+      return res.status(404).json({ error: 'Category not found' });
+    }
+    
+    // Check if category has products
+    const productCount = await prisma.product.count({ where: { categoryId: id } });
+    if (productCount > 0) {
+      return res.status(400).json({ 
+        error: `Cannot delete category. It has ${productCount} products. Please move or delete products first.` 
+      });
+    }
+    
+    // Delete category (cascade will handle related records)
+    await prisma.category.delete({ where: { id } });
+    
+    res.json({ message: 'Category deleted successfully' });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Internal Server Error' });
@@ -629,6 +734,23 @@ app.get('/api/recommendations', async (req, res) => {
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+// ================================
+// Upload endpoint
+// ================================
+app.post('/api/upload', upload.single('image'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    const fileUrl = `/uploads/${req.file.filename}`;
+    res.json({ url: fileUrl });
+  } catch (error) {
+    console.error('Upload error:', error);
+    res.status(500).json({ error: 'Upload failed' });
   }
 });
 
