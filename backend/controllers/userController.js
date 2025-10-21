@@ -28,7 +28,7 @@ export const getUsers = async (req, res) => {
 export const updateProfile = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { name, phone, address, city, postalCode, avatar } = req.body;
+    const { name, phone, address, city } = req.body;
     
     // Check if user exists
     const existingUser = await prisma.user.findUnique({ where: { id: userId } });
@@ -43,9 +43,7 @@ export const updateProfile = async (req, res) => {
         ...(name !== undefined && { name }),
         ...(phone !== undefined && { phone }),
         ...(address !== undefined && { address }),
-        ...(city !== undefined && { city }),
-        ...(postalCode !== undefined && { postalCode }),
-        ...(avatar !== undefined && { avatar })
+        ...(city !== undefined && { city })
       },
       select: {
         id: true,
@@ -54,8 +52,6 @@ export const updateProfile = async (req, res) => {
         phone: true,
         address: true,
         city: true,
-        postalCode: true,
-        avatar: true,
         role: true,
         isActive: true,
         createdAt: true,
@@ -82,8 +78,6 @@ export const getProfile = async (req, res) => {
         phone: true,
         address: true,
         city: true,
-        postalCode: true,
-        avatar: true,
         role: true,
         isActive: true,
         createdAt: true,

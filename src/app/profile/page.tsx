@@ -24,7 +24,6 @@ interface UserProfile {
   phone: string
   address: string
   city: string
-  postalCode: string
 }
 
 interface Order {
@@ -41,7 +40,6 @@ interface Address {
   phone: string
   address: string
   city: string
-  postalCode: string
   isDefault: boolean
 }
 
@@ -96,7 +94,6 @@ function ProfilePageContent() {
     phone: "",
     address: "",
     city: "",
-    postalCode: "",
   })
 
   useEffect(() => {
@@ -114,7 +111,6 @@ function ProfilePageContent() {
           phone: userData.phone || "",
           address: userData.address || "",
           city: userData.city || "",
-          postalCode: userData.postalCode || "",
         })
       } catch (error) {
         console.error('Error fetching profile:', error)
@@ -580,16 +576,6 @@ function ProfilePageContent() {
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">Mã bưu điện</label>
-                    <input
-                      type="text"
-                      value={isEditing ? editedProfile.postalCode : profile.postalCode}
-                      onChange={(e) => setEditedProfile({ ...editedProfile, postalCode: e.target.value })}
-                      disabled={!isEditing}
-                      className="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-60 text-foreground"
-                    />
-                  </div>
 
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-foreground mb-2">Địa chỉ</label>

@@ -19,8 +19,6 @@ export default function UserModal({ isOpen, onClose, user, onSave }: UserModalPr
     phone: "",
     address: "",
     city: "",
-    postalCode: "",
-    avatar: "",
   })
 
   useEffect(() => {
@@ -31,8 +29,6 @@ export default function UserModal({ isOpen, onClose, user, onSave }: UserModalPr
         phone: user.phone || "",
         address: user.address || "",
         city: user.city || "",
-        postalCode: user.postalCode || "",
-        avatar: user.avatar || "",
       })
     } else {
       setFormData({
@@ -41,8 +37,6 @@ export default function UserModal({ isOpen, onClose, user, onSave }: UserModalPr
         phone: "",
         address: "",
         city: "",
-        postalCode: "",
-        avatar: "",
       })
     }
   }, [user, isOpen])
@@ -113,33 +107,12 @@ export default function UserModal({ isOpen, onClose, user, onSave }: UserModalPr
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Thành phố</label>
-              <input
-                type="text"
-                value={formData.city}
-                onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                className="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Mã bưu điện</label>
-              <input
-                type="text"
-                value={formData.postalCode}
-                onChange={(e) => setFormData({ ...formData, postalCode: e.target.value })}
-                className="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
-          </div>
-
           <div>
-            <label className="block text-sm font-medium text-foreground mb-2">Avatar URL</label>
+            <label className="block text-sm font-medium text-foreground mb-2">Thành phố</label>
             <input
-              type="url"
-              value={formData.avatar}
-              onChange={(e) => setFormData({ ...formData, avatar: e.target.value })}
+              type="text"
+              value={formData.city}
+              onChange={(e) => setFormData({ ...formData, city: e.target.value })}
               className="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>

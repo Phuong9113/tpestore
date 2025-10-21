@@ -35,8 +35,6 @@ model User {
   phone       String?
   address     String?
   city        String?
-  postalCode  String?
-  avatar      String?
   role        Role      @default(CUSTOMER)
   isActive    Boolean   @default(true)
   createdAt   DateTime  @default(now())

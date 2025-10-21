@@ -129,8 +129,6 @@ export interface AdminUser {
   phone: string | null;
   address: string | null;
   city: string | null;
-  postalCode: string | null;
-  avatar: string | null;
   role: 'CUSTOMER' | 'ADMIN';
   isActive: boolean;
   createdAt: string;

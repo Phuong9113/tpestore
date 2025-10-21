@@ -27,8 +27,6 @@ export const getAdminUsers = async (req, res) => {
           phone: true,
           address: true,
           city: true,
-          postalCode: true,
-          avatar: true,
           role: true,
           isActive: true,
           createdAt: true,
@@ -82,8 +80,6 @@ export const getAdminUserById = async (req, res) => {
         phone: true,
         address: true,
         city: true,
-        postalCode: true,
-        avatar: true,
         role: true,
         isActive: true,
         createdAt: true,
@@ -124,7 +120,7 @@ export const getAdminUserById = async (req, res) => {
 export const updateUser = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, email, phone, address, city, postalCode, avatar } = req.body;
+    const { name, email, phone, address, city } = req.body;
     
     // Check if user exists
     const existingUser = await prisma.user.findUnique({ where: { id } });
@@ -156,9 +152,7 @@ export const updateUser = async (req, res) => {
         ...(email && { email }),
         ...(phone !== undefined && { phone }),
         ...(address !== undefined && { address }),
-        ...(city !== undefined && { city }),
-        ...(postalCode !== undefined && { postalCode }),
-        ...(avatar !== undefined && { avatar })
+        ...(city !== undefined && { city })
       },
       select: {
         id: true,
@@ -167,8 +161,6 @@ export const updateUser = async (req, res) => {
         phone: true,
         address: true,
         city: true,
-        postalCode: true,
-        avatar: true,
         role: true,
         isActive: true,
         createdAt: true,

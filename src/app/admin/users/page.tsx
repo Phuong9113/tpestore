@@ -195,11 +195,11 @@ export default function UsersPage() {
                 <tr key={user.id} className="hover:bg-muted/30 transition-colors">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <img
-                        src={user.avatar || "/placeholder.svg"}
-                        alt={user.name || "User"}
-                        className="w-10 h-10 rounded-full bg-muted"
-                      />
+                      <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                        <span className="text-lg font-medium text-muted-foreground">
+                          {(user.name || user.email).charAt(0).toUpperCase()}
+                        </span>
+                      </div>
                       <div>
                         <p className="text-sm font-medium text-foreground flex items-center gap-2">
                           {user.name || "Chưa có tên"}
