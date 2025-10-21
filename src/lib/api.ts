@@ -1,4 +1,4 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4000";
+const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4000") + "/api";
 
 export interface ApiCategory {
   id: string;
@@ -76,14 +76,14 @@ function mapApiProductToUi(product: ApiProduct): UiProduct {
 }
 
 export async function fetchProducts(): Promise<UiProduct[]> {
-  const res = await fetch(`${API_BASE}/api/products`, { cache: "no-store" });
+  const res = await fetch(`${API_BASE}/products`, { cache: "no-store" });
   if (!res.ok) throw new Error(`Failed to fetch products: ${res.status}`);
   const data: ApiProduct[] = await res.json();
   return data.map(mapApiProductToUi);
 }
 
 export async function fetchProductById(id: string): Promise<UiProduct | null> {
-  const res = await fetch(`${API_BASE}/api/products/${id}`, { cache: "no-store" });
+  const res = await fetch(`${API_BASE}/products/${id}`, { cache: "no-store" });
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(`Failed to fetch product ${id}: ${res.status}`);
   const data: ApiProduct = await res.json();
@@ -92,7 +92,7 @@ export async function fetchProductById(id: string): Promise<UiProduct | null> {
 
 // Categories API
 export async function fetchCategories(): Promise<ApiCategory[]> {
-  const res = await fetch(`${API_BASE}/api/categories`, { cache: "no-store" });
+  const res = await fetch(`${API_BASE}/categories`, { cache: "no-store" });
   if (!res.ok) throw new Error(`Failed to fetch categories: ${res.status}`);
   return await res.json();
 }
@@ -178,7 +178,7 @@ export async function fetchAdminProducts(params?: {
   if (params?.search) searchParams.set('search', params.search);
   if (params?.categoryId) searchParams.set('categoryId', params.categoryId);
 
-  const res = await fetch(`${API_BASE}/api/admin/products?${searchParams}`, {
+  const res = await fetch(`${API_BASE}/admin/products?${searchParams}`, {
     headers: getAuthHeaders(),
   });
   if (!res.ok) throw new Error(`Failed to fetch admin products: ${res.status}`);
@@ -200,7 +200,7 @@ export interface CreateProductData {
 }
 
 export async function createProduct(productData: CreateProductData): Promise<AdminProduct> {
-  const res = await fetch(`${API_BASE}/api/admin/products`, {
+  const res = await fetch(`${API_BASE}/admin/products`, {
     method: 'POST',
     headers: getAuthHeaders(),
     body: JSON.stringify(productData),
@@ -210,7 +210,7 @@ export async function createProduct(productData: CreateProductData): Promise<Adm
 }
 
 export async function updateProduct(id: string, productData: Partial<CreateProductData>): Promise<AdminProduct> {
-  const res = await fetch(`${API_BASE}/api/admin/products/${id}`, {
+  const res = await fetch(`${API_BASE}/admin/products/${id}`, {
     method: 'PUT',
     headers: getAuthHeaders(),
     body: JSON.stringify(productData),
@@ -220,7 +220,7 @@ export async function updateProduct(id: string, productData: Partial<CreateProdu
 }
 
 export async function deleteProduct(id: string): Promise<void> {
-  const res = await fetch(`${API_BASE}/api/admin/products/${id}`, {
+  const res = await fetch(`${API_BASE}/admin/products/${id}`, {
     method: 'DELETE',
     headers: getAuthHeaders(),
   });
@@ -229,7 +229,7 @@ export async function deleteProduct(id: string): Promise<void> {
 
 // Excel template and import (Admin)
 export function getProductTemplateUrl(categoryId: string): string {
-  return `${API_BASE}/api/admin/products/template/${categoryId}`;
+  return `${API_BASE}/admin/products/template/${categoryId}`;
 }
 
 export async function importProductsFromExcel(categoryId: string, file: File): Promise<{ imported: number; results: any[] }>{
@@ -237,7 +237,7 @@ export async function importProductsFromExcel(categoryId: string, file: File): P
   const form = new FormData();
   form.append('categoryId', categoryId);
   form.append('file', file);
-  const res = await fetch(`${API_BASE}/api/admin/products/import`, {
+  const res = await fetch(`${API_BASE}/admin/products/import`, {
     method: 'POST',
     headers: {
       ...(token && { Authorization: `Bearer ${token}` })
@@ -259,7 +259,7 @@ export async function fetchAdminCategories(params?: {
   if (params?.limit) searchParams.set('limit', params.limit.toString());
   if (params?.search) searchParams.set('search', params.search);
 
-  const res = await fetch(`${API_BASE}/api/categories?${searchParams}`, {
+  const res = await fetch(`${API_BASE}/categories?${searchParams}`, {
     headers: { 'Content-Type': 'application/json' },
   });
   if (!res.ok) throw new Error(`Failed to fetch admin categories: ${res.status}`);
@@ -268,7 +268,7 @@ export async function fetchAdminCategories(params?: {
 }
 
 export async function createCategory(categoryData: Partial<AdminCategory>): Promise<AdminCategory> {
-  const res = await fetch(`${API_BASE}/api/categories`, {
+  const res = await fetch(`${API_BASE}/categories`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(categoryData),
@@ -278,7 +278,7 @@ export async function createCategory(categoryData: Partial<AdminCategory>): Prom
 }
 
 export async function updateCategory(id: string, categoryData: Partial<AdminCategory>): Promise<AdminCategory> {
-  const res = await fetch(`${API_BASE}/api/admin/categories/${id}`, {
+  const res = await fetch(`${API_BASE}/admin/categories/${id}`, {
     method: 'PUT',
     headers: getAuthHeaders(),
     body: JSON.stringify(categoryData),
@@ -288,7 +288,7 @@ export async function updateCategory(id: string, categoryData: Partial<AdminCate
 }
 
 export async function deleteCategory(id: string): Promise<void> {
-  const res = await fetch(`${API_BASE}/api/categories/${id}`, {
+  const res = await fetch(`${API_BASE}/categories/${id}`, {
     method: 'DELETE',
     headers: { 'Content-Type': 'application/json' },
   });
@@ -308,7 +308,7 @@ export async function fetchAdminUsers(params?: {
   if (params?.search) searchParams.set('search', params.search);
   if (params?.role) searchParams.set('role', params.role);
 
-  const res = await fetch(`${API_BASE}/api/admin/users?${searchParams}`, {
+  const res = await fetch(`${API_BASE}/admin/users?${searchParams}`, {
     headers: getAuthHeaders(),
   });
   if (!res.ok) throw new Error(`Failed to fetch admin users: ${res.status}`);
@@ -316,7 +316,7 @@ export async function fetchAdminUsers(params?: {
 }
 
 export async function updateUser(id: string, userData: Partial<AdminUser>): Promise<AdminUser> {
-  const res = await fetch(`${API_BASE}/api/admin/users/${id}`, {
+  const res = await fetch(`${API_BASE}/admin/users/${id}`, {
     method: 'PUT',
     headers: getAuthHeaders(),
     body: JSON.stringify(userData),
@@ -326,7 +326,7 @@ export async function updateUser(id: string, userData: Partial<AdminUser>): Prom
 }
 
 export async function deleteUser(id: string): Promise<void> {
-  const res = await fetch(`${API_BASE}/api/admin/users/${id}`, {
+  const res = await fetch(`${API_BASE}/admin/users/${id}`, {
     method: 'DELETE',
     headers: getAuthHeaders(),
   });
@@ -335,7 +335,7 @@ export async function deleteUser(id: string): Promise<void> {
 
 // User Profile API
 export async function fetchUserProfile(): Promise<AdminUser> {
-  const res = await fetch(`${API_BASE}/api/users/profile`, {
+  const res = await fetch(`${API_BASE}/users/profile`, {
     headers: getAuthHeaders(),
   });
   if (!res.ok) throw new Error(`Failed to fetch user profile: ${res.status}`);
@@ -343,7 +343,7 @@ export async function fetchUserProfile(): Promise<AdminUser> {
 }
 
 export async function updateUserProfile(userData: Partial<AdminUser>): Promise<AdminUser> {
-  const res = await fetch(`${API_BASE}/api/users/profile`, {
+  const res = await fetch(`${API_BASE}/users/profile`, {
     method: 'PUT',
     headers: getAuthHeaders(),
     body: JSON.stringify(userData),
@@ -356,7 +356,7 @@ export async function updateUserProfile(userData: Partial<AdminUser>): Promise<A
 export async function uploadImage(file: File): Promise<string> {
   const form = new FormData();
   form.append('image', file);
-  const res = await fetch(`${API_BASE}/api/upload`, {
+  const res = await fetch(`${API_BASE}/upload`, {
     method: 'POST',
     body: form
   });

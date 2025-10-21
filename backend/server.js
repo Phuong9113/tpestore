@@ -30,6 +30,12 @@ import {
   deleteUser as deleteAdminUser,
   getUserStats
 } from './controllers/adminUserController.js';
+import {
+  getAdminOrders,
+  getAdminOrderById,
+  updateAdminOrderStatus,
+  getOrderStats
+} from './controllers/adminOrderController.js';
 
 const app = express();
 const prisma = new PrismaClient();
@@ -863,6 +869,12 @@ adminRouter.get('/users/:id', getAdminUserById);
 adminRouter.put('/users/:id', updateAdminUser);
 adminRouter.delete('/users/:id', deleteAdminUser);
 adminRouter.get('/users/stats', getUserStats);
+
+// Order management
+adminRouter.get('/orders/stats', getOrderStats);
+adminRouter.get('/orders', getAdminOrders);
+adminRouter.get('/orders/:id', getAdminOrderById);
+adminRouter.patch('/orders/:id/status', updateAdminOrderStatus);
 
 app.use('/api/admin', adminRouter);
 

@@ -2,21 +2,56 @@
 
 import { XMarkIcon, TruckIcon } from "@heroicons/react/24/outline"
 
+interface Order {
+  id: string
+  totalPrice: number
+  status: string
+  paymentStatus: string
+  createdAt: string
+  user: {
+    id: string
+    name: string
+    email: string
+    phone: string
+  }
+  orderItems: Array<{
+    id: string
+    quantity: number
+    price: number
+    product: {
+      id: string
+      name: string
+      image: string
+      price: number
+    }
+  }>
+}
+
 interface OrderDetailModalProps {
   isOpen: boolean
   onClose: () => void
-  order: any
+  order: Order | null
 }
 
 export default function OrderDetailModal({ isOpen, onClose, order }: OrderDetailModalProps) {
   if (!isOpen || !order) return null
 
   const statusConfig = {
-    pending: { label: "Chờ xử lý", color: "bg-yellow-500/10 text-yellow-500" },
-    processing: { label: "Đang xử lý", color: "bg-blue-500/10 text-blue-500" },
-    shipping: { label: "Đang giao", color: "bg-purple-500/10 text-purple-500" },
-    completed: { label: "Hoàn thành", color: "bg-green-500/10 text-green-500" },
-    cancelled: { label: "Đã hủy", color: "bg-red-500/10 text-red-500" },
+    PENDING: { label: "Chờ xử lý", color: "bg-yellow-500/10 text-yellow-500" },
+    PROCESSING: { label: "Đang xử lý", color: "bg-blue-500/10 text-blue-500" },
+    SHIPPING: { label: "Đang giao", color: "bg-purple-500/10 text-purple-500" },
+    COMPLETED: { label: "Hoàn thành", color: "bg-green-500/10 text-green-500" },
+    CANCELLED: { label: "Đã hủy", color: "bg-red-500/10 text-red-500" },
+  }
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleString('vi-VN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
   }
 
   return (
@@ -26,7 +61,7 @@ export default function OrderDetailModal({ isOpen, onClose, order }: OrderDetail
         <div className="flex items-center justify-between p-6 border-b border-border sticky top-0 bg-card">
           <div>
             <h2 className="text-xl font-bold text-foreground">Chi tiết đơn hàng {order.id}</h2>
-            <p className="text-sm text-muted-foreground mt-1">{order.date}</p>
+            <p className="text-sm text-muted-foreground mt-1">{formatDate(order.createdAt)}</p>
           </div>
           <button
             onClick={onClose}
@@ -42,14 +77,14 @@ export default function OrderDetailModal({ isOpen, onClose, order }: OrderDetail
             <div>
               <p className="text-sm text-muted-foreground">Trạng thái đơn hàng</p>
               <span
-                className={`inline-block mt-2 px-3 py-1.5 rounded-full text-sm font-medium ${statusConfig[order.status as keyof typeof statusConfig].color}`}
+                className={`inline-block mt-2 px-3 py-1.5 rounded-full text-sm font-medium ${statusConfig[order.status as keyof typeof statusConfig]?.color || 'bg-gray-500/10 text-gray-500'}`}
               >
-                {statusConfig[order.status as keyof typeof statusConfig].label}
+                {statusConfig[order.status as keyof typeof statusConfig]?.label || order.status}
               </span>
             </div>
             <div className="text-right">
               <p className="text-sm text-muted-foreground">Tổng tiền</p>
-              <p className="text-2xl font-bold text-foreground mt-1">{order.total.toLocaleString("vi-VN")}₫</p>
+              <p className="text-2xl font-bold text-foreground mt-1">{order.totalPrice.toLocaleString("vi-VN")}₫</p>
             </div>
           </div>
 
@@ -59,41 +94,15 @@ export default function OrderDetailModal({ isOpen, onClose, order }: OrderDetail
             <div className="bg-muted/30 rounded-lg p-4 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Họ tên:</span>
-                <span className="text-sm font-medium text-foreground">{order.customer.name}</span>
+                <span className="text-sm font-medium text-foreground">{order.user.name}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Email:</span>
-                <span className="text-sm font-medium text-foreground">{order.customer.email}</span>
+                <span className="text-sm font-medium text-foreground">{order.user.email}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Số điện thoại:</span>
-                <span className="text-sm font-medium text-foreground">{order.customer.phone}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Shipping Info */}
-          <div>
-            <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
-              <TruckIcon className="w-5 h-5" />
-              Thông tin giao hàng
-            </h3>
-            <div className="bg-muted/30 rounded-lg p-4 space-y-2">
-              <div className="flex items-start justify-between">
-                <span className="text-sm text-muted-foreground">Địa chỉ:</span>
-                <span className="text-sm font-medium text-foreground text-right max-w-xs">
-                  {order.shipping.address}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Phương thức:</span>
-                <span className="text-sm font-medium text-foreground">{order.shipping.method}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Phí vận chuyển:</span>
-                <span className="text-sm font-medium text-foreground">
-                  {order.shipping.fee.toLocaleString("vi-VN")}₫
-                </span>
+                <span className="text-sm font-medium text-foreground">{order.user.phone}</span>
               </div>
             </div>
           </div>
@@ -102,13 +111,14 @@ export default function OrderDetailModal({ isOpen, onClose, order }: OrderDetail
           <div>
             <h3 className="text-lg font-semibold text-foreground mb-3">Sản phẩm</h3>
             <div className="space-y-3">
-              {order.items.map((item: any, index: number) => (
+              {order.orderItems.map((item, index) => (
                 <div key={index} className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-foreground">{item.name}</p>
+                    <p className="text-sm font-medium text-foreground">{item.product.name}</p>
                     <p className="text-xs text-muted-foreground mt-1">Số lượng: {item.quantity}</p>
+                    <p className="text-xs text-muted-foreground">Giá: {item.product.price.toLocaleString("vi-VN")}₫</p>
                   </div>
-                  <span className="text-sm font-medium text-foreground">{item.price.toLocaleString("vi-VN")}₫</span>
+                  <span className="text-sm font-medium text-foreground">{(item.price * item.quantity).toLocaleString("vi-VN")}₫</span>
                 </div>
               ))}
             </div>
@@ -117,19 +127,9 @@ export default function OrderDetailModal({ isOpen, onClose, order }: OrderDetail
           {/* Order Summary */}
           <div className="border-t border-border pt-4">
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Tạm tính:</span>
-                <span className="text-sm text-foreground">
-                  {(order.total - order.shipping.fee).toLocaleString("vi-VN")}₫
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Phí vận chuyển:</span>
-                <span className="text-sm text-foreground">{order.shipping.fee.toLocaleString("vi-VN")}₫</span>
-              </div>
               <div className="flex items-center justify-between pt-2 border-t border-border">
                 <span className="text-base font-semibold text-foreground">Tổng cộng:</span>
-                <span className="text-lg font-bold text-primary">{order.total.toLocaleString("vi-VN")}₫</span>
+                <span className="text-lg font-bold text-primary">{order.totalPrice.toLocaleString("vi-VN")}₫</span>
               </div>
             </div>
           </div>

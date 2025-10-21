@@ -1,140 +1,135 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { MagnifyingGlassIcon, EyeIcon } from "@heroicons/react/24/outline"
 import OrderDetailModal from "@/components/admin/OrderDetailModal"
+import { api } from "@/lib/api"
 
-const initialOrders = [
-  {
-    id: "ORD-001",
-    customer: { name: "Nguyễn Văn A", email: "nguyenvana@example.com", phone: "0901234567" },
-    date: "2024-12-15 14:30",
-    total: 15500000,
-    status: "completed",
-    payment: "paid",
-    items: [{ name: "iPhone 15 Pro Max", quantity: 1, price: 15500000 }],
-    shipping: {
-      address: "123 Đường ABC, Quận 1, TP.HCM",
-      method: "Giao hàng nhanh",
-      fee: 0,
-    },
-  },
-  {
-    id: "ORD-002",
-    customer: { name: "Trần Thị B", email: "tranthib@example.com", phone: "0912345678" },
-    date: "2024-12-15 10:15",
-    total: 8200000,
-    status: "processing",
-    payment: "paid",
-    items: [
-      { name: "AirPods Pro 2", quantity: 2, price: 6490000 },
-      { name: "Anker PowerCore", quantity: 1, price: 1290000 },
-    ],
-    shipping: {
-      address: "456 Đường XYZ, Quận 3, TP.HCM",
-      method: "Giao hàng tiêu chuẩn",
-      fee: 30000,
-    },
-  },
-  {
-    id: "ORD-003",
-    customer: { name: "Lê Văn C", email: "levanc@example.com", phone: "0923456789" },
-    date: "2024-12-14 16:45",
-    total: 22000000,
-    status: "completed",
-    payment: "paid",
-    items: [{ name: "iPad Pro M2", quantity: 1, price: 22990000 }],
-    shipping: {
-      address: "789 Đường DEF, Quận 7, TP.HCM",
-      method: "Giao hàng nhanh",
-      fee: 0,
-    },
-  },
-  {
-    id: "ORD-004",
-    customer: { name: "Phạm Thị D", email: "phamthid@example.com", phone: "0934567890" },
-    date: "2024-12-14 09:20",
-    total: 5800000,
-    status: "pending",
-    payment: "pending",
-    items: [
-      { name: "Logitech MX Master 3S", quantity: 1, price: 2490000 },
-      { name: "Keychron K8 Pro", quantity: 1, price: 3290000 },
-    ],
-    shipping: {
-      address: "321 Đường GHI, Quận 10, TP.HCM",
-      method: "Giao hàng tiêu chuẩn",
-      fee: 30000,
-    },
-  },
-  {
-    id: "ORD-005",
-    customer: { name: "Hoàng Văn E", email: "hoangvane@example.com", phone: "0945678901" },
-    date: "2024-12-13 11:30",
-    total: 12300000,
-    status: "shipping",
-    payment: "paid",
-    items: [{ name: "Samsung Tab S9+", quantity: 1, price: 24990000 }],
-    shipping: {
-      address: "654 Đường JKL, Quận 2, TP.HCM",
-      method: "Giao hàng nhanh",
-      fee: 0,
-    },
-  },
-  {
-    id: "ORD-006",
-    customer: { name: "Võ Thị F", email: "vothif@example.com", phone: "0956789012" },
-    date: "2024-12-13 08:15",
-    total: 3800000,
-    status: "cancelled",
-    payment: "refunded",
-    items: [{ name: "Sony WH-1000XM5", quantity: 1, price: 8990000 }],
-    shipping: {
-      address: "987 Đường MNO, Quận 5, TP.HCM",
-      method: "Giao hàng tiêu chuẩn",
-      fee: 30000,
-    },
-  },
-]
+interface Order {
+  id: string
+  totalPrice: number
+  status: string
+  paymentStatus: string
+  createdAt: string
+  user: {
+    id: string
+    name: string
+    email: string
+    phone: string
+  }
+  orderItems: Array<{
+    id: string
+    quantity: number
+    price: number
+    product: {
+      id: string
+      name: string
+      image: string
+      price: number
+    }
+  }>
+}
+
+interface OrderStats {
+  totalOrders: number
+  pendingOrders: number
+  processingOrders: number
+  shippingOrders: number
+  completedOrders: number
+  cancelledOrders: number
+  totalRevenue: number
+}
 
 export default function OrdersPage() {
-  const [orders, setOrders] = useState(initialOrders)
+  const [orders, setOrders] = useState<Order[]>([])
+  const [stats, setStats] = useState<OrderStats | null>(null)
+  const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedStatus, setSelectedStatus] = useState("all")
   const [selectedPayment, setSelectedPayment] = useState("all")
-  const [selectedOrder, setSelectedOrder] = useState<any>(null)
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
-
-  const filteredOrders = orders.filter((order) => {
-    const matchesSearch =
-      order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.customer.name.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesStatus = selectedStatus === "all" || order.status === selectedStatus
-    const matchesPayment = selectedPayment === "all" || order.payment === selectedPayment
-    return matchesSearch && matchesStatus && matchesPayment
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 10,
+    total: 0,
+    pages: 0
   })
 
-  const handleViewDetail = (order: any) => {
+  // Fetch orders and stats
+  useEffect(() => {
+    fetchOrders()
+    fetchStats()
+  }, [selectedStatus, selectedPayment, searchQuery, pagination.page])
+
+  const fetchOrders = async () => {
+    try {
+      setLoading(true)
+      const params = new URLSearchParams({
+        page: pagination.page.toString(),
+        limit: pagination.limit.toString(),
+        ...(selectedStatus !== "all" && { status: selectedStatus }),
+        ...(selectedPayment !== "all" && { payment: selectedPayment }),
+        ...(searchQuery && { search: searchQuery })
+      })
+
+      const response = await api.get(`/admin/orders?${params}`)
+      setOrders(response.orders)
+      setPagination(response.pagination)
+    } catch (error) {
+      console.error('Error fetching orders:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const fetchStats = async () => {
+    try {
+      const response = await api.get('/admin/orders/stats')
+      setStats(response)
+    } catch (error) {
+      console.error('Error fetching stats:', error)
+    }
+  }
+
+  const handleViewDetail = (order: Order) => {
     setSelectedOrder(order)
     setIsDetailModalOpen(true)
   }
 
-  const handleUpdateStatus = (orderId: string, newStatus: string) => {
-    setOrders(orders.map((order) => (order.id === orderId ? { ...order, status: newStatus } : order)))
+  const handleUpdateStatus = async (orderId: string, newStatus: string) => {
+    try {
+      await api.patch(`/admin/orders/${orderId}/status`, { status: newStatus })
+      // Refresh orders after update
+      fetchOrders()
+      fetchStats()
+    } catch (error) {
+      console.error('Error updating order status:', error)
+    }
   }
 
   const statusConfig = {
-    pending: { label: "Chờ xử lý", color: "bg-yellow-500/10 text-yellow-500" },
-    processing: { label: "Đang xử lý", color: "bg-blue-500/10 text-blue-500" },
-    shipping: { label: "Đang giao", color: "bg-purple-500/10 text-purple-500" },
-    completed: { label: "Hoàn thành", color: "bg-green-500/10 text-green-500" },
-    cancelled: { label: "Đã hủy", color: "bg-red-500/10 text-red-500" },
+    PENDING: { label: "Chờ xử lý", color: "bg-yellow-500/10 text-yellow-500" },
+    PROCESSING: { label: "Đang xử lý", color: "bg-blue-500/10 text-blue-500" },
+    SHIPPING: { label: "Đang giao", color: "bg-purple-500/10 text-purple-500" },
+    COMPLETED: { label: "Hoàn thành", color: "bg-green-500/10 text-green-500" },
+    CANCELLED: { label: "Đã hủy", color: "bg-red-500/10 text-red-500" },
   }
 
   const paymentConfig = {
-    pending: { label: "Chờ thanh toán", color: "bg-yellow-500/10 text-yellow-500" },
-    paid: { label: "Đã thanh toán", color: "bg-green-500/10 text-green-500" },
-    refunded: { label: "Đã hoàn tiền", color: "bg-gray-500/10 text-gray-500" },
+    PENDING: { label: "Chờ thanh toán", color: "bg-yellow-500/10 text-yellow-500" },
+    PAID: { label: "Đã thanh toán", color: "bg-green-500/10 text-green-500" },
+    REFUNDED: { label: "Đã hoàn tiền", color: "bg-gray-500/10 text-gray-500" },
+  }
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleString('vi-VN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
   }
 
   return (
@@ -149,30 +144,32 @@ export default function OrdersPage() {
       <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
         <div className="bg-card border border-border rounded-lg p-6">
           <p className="text-sm text-muted-foreground">Tổng đơn hàng</p>
-          <p className="text-2xl font-bold text-foreground mt-2">{orders.length}</p>
+          <p className="text-2xl font-bold text-foreground mt-2">
+            {loading ? "..." : stats?.totalOrders || 0}
+          </p>
         </div>
         <div className="bg-card border border-border rounded-lg p-6">
           <p className="text-sm text-muted-foreground">Chờ xử lý</p>
           <p className="text-2xl font-bold text-yellow-500 mt-2">
-            {orders.filter((o) => o.status === "pending").length}
+            {loading ? "..." : stats?.pendingOrders || 0}
           </p>
         </div>
         <div className="bg-card border border-border rounded-lg p-6">
           <p className="text-sm text-muted-foreground">Đang xử lý</p>
           <p className="text-2xl font-bold text-blue-500 mt-2">
-            {orders.filter((o) => o.status === "processing").length}
+            {loading ? "..." : stats?.processingOrders || 0}
           </p>
         </div>
         <div className="bg-card border border-border rounded-lg p-6">
           <p className="text-sm text-muted-foreground">Đang giao</p>
           <p className="text-2xl font-bold text-purple-500 mt-2">
-            {orders.filter((o) => o.status === "shipping").length}
+            {loading ? "..." : stats?.shippingOrders || 0}
           </p>
         </div>
         <div className="bg-card border border-border rounded-lg p-6">
           <p className="text-sm text-muted-foreground">Hoàn thành</p>
           <p className="text-2xl font-bold text-green-500 mt-2">
-            {orders.filter((o) => o.status === "completed").length}
+            {loading ? "..." : stats?.completedOrders || 0}
           </p>
         </div>
       </div>
@@ -245,64 +242,72 @@ export default function OrdersPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {filteredOrders.map((order) => (
-                <tr key={order.id} className="hover:bg-muted/30 transition-colors">
-                  <td className="px-6 py-4">
-                    <span className="text-sm font-medium text-foreground">{order.id}</span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div>
-                      <p className="text-sm font-medium text-foreground">{order.customer.name}</p>
-                      <p className="text-xs text-muted-foreground">{order.customer.email}</p>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="text-sm text-foreground">{order.date}</span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="text-sm font-medium text-foreground">{order.total.toLocaleString("vi-VN")}₫</span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <select
-                      value={order.status}
-                      onChange={(e) => handleUpdateStatus(order.id, e.target.value)}
-                      className={`px-2.5 py-1 rounded-full text-xs font-medium border-0 focus:outline-none focus:ring-2 focus:ring-primary ${statusConfig[order.status as keyof typeof statusConfig].color}`}
-                    >
-                      <option value="pending">Chờ xử lý</option>
-                      <option value="processing">Đang xử lý</option>
-                      <option value="shipping">Đang giao</option>
-                      <option value="completed">Hoàn thành</option>
-                      <option value="cancelled">Đã hủy</option>
-                    </select>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span
-                      className={`px-2.5 py-1 rounded-full text-xs font-medium ${paymentConfig[order.payment as keyof typeof paymentConfig].color}`}
-                    >
-                      {paymentConfig[order.payment as keyof typeof paymentConfig].label}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center justify-end gap-2">
-                      <button
-                        onClick={() => handleViewDetail(order)}
-                        className="p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
-                      >
-                        <EyeIcon className="w-4 h-4" />
-                      </button>
-                    </div>
+              {loading ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-12 text-center">
+                    <p className="text-muted-foreground">Đang tải dữ liệu...</p>
                   </td>
                 </tr>
-              ))}
+              ) : orders.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-12 text-center">
+                    <p className="text-muted-foreground">Không tìm thấy đơn hàng nào</p>
+                  </td>
+                </tr>
+              ) : (
+                orders.map((order) => (
+                  <tr key={order.id} className="hover:bg-muted/30 transition-colors">
+                    <td className="px-6 py-4">
+                      <span className="text-sm font-medium text-foreground">{order.id}</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div>
+                        <p className="text-sm font-medium text-foreground">{order.user.name}</p>
+                        <p className="text-xs text-muted-foreground">{order.user.email}</p>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-sm text-foreground">{formatDate(order.createdAt)}</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-sm font-medium text-foreground">{order.totalPrice.toLocaleString("vi-VN")}₫</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <select
+                        value={order.status}
+                        onChange={(e) => handleUpdateStatus(order.id, e.target.value)}
+                        className={`px-2.5 py-1 rounded-full text-xs font-medium border-0 focus:outline-none focus:ring-2 focus:ring-primary ${statusConfig[order.status as keyof typeof statusConfig]?.color || 'bg-gray-500/10 text-gray-500'}`}
+                      >
+                        <option value="PENDING">Chờ xử lý</option>
+                        <option value="PROCESSING">Đang xử lý</option>
+                        <option value="SHIPPING">Đang giao</option>
+                        <option value="COMPLETED">Hoàn thành</option>
+                        <option value="CANCELLED">Đã hủy</option>
+                      </select>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span
+                        className={`px-2.5 py-1 rounded-full text-xs font-medium ${paymentConfig[order.paymentStatus as keyof typeof paymentConfig]?.color || 'bg-gray-500/10 text-gray-500'}`}
+                      >
+                        {paymentConfig[order.paymentStatus as keyof typeof paymentConfig]?.label || order.paymentStatus}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => handleViewDetail(order)}
+                          className="p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                        >
+                          <EyeIcon className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
-
-        {filteredOrders.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">Không tìm thấy đơn hàng nào</p>
-          </div>
-        )}
       </div>
 
       {/* Order Detail Modal */}

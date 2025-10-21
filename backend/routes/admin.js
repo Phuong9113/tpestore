@@ -23,6 +23,12 @@ import {
   deleteUser, 
   getUserStats 
 } from '../controllers/adminUserController.js';
+import { 
+  getAdminOrders, 
+  getAdminOrderById, 
+  updateAdminOrderStatus, 
+  getOrderStats 
+} from '../controllers/adminOrderController.js';
 import { requireAdmin } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -56,5 +62,11 @@ router.get('/users/:id', getAdminUserById);
 router.put('/users/:id', updateUser);
 router.delete('/users/:id', deleteUser);
 router.get('/users/stats', getUserStats);
+
+// Order management
+router.get('/orders', getAdminOrders);
+router.get('/orders/:id', getAdminOrderById);
+router.patch('/orders/:id/status', updateAdminOrderStatus);
+router.get('/orders/stats', getOrderStats);
 
 export default router;

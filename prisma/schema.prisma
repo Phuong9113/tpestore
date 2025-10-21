@@ -15,10 +15,16 @@ enum Role {
 
 enum OrderStatus {
   PENDING
-  PAID
-  SHIPPED
+  PROCESSING
+  SHIPPING
   COMPLETED
   CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  REFUNDED
 }
 
 model User {
@@ -109,15 +115,16 @@ model CartItem {
 }
 
 model Order {
-  id         String      @id @default(cuid())
-  userId     String
-  totalPrice Float
-  status     OrderStatus @default(PENDING)
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt
+  id           String        @id @default(cuid())
+  userId       String
+  totalPrice   Float
+  status       OrderStatus   @default(PENDING)
+  paymentStatus PaymentStatus @default(PENDING)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
 
-  user       User        @relation("UserOrders", fields: [userId], references: [id], onDelete: Cascade)
-  orderItems OrderItem[] @relation("OrderOrderItems")
+  user         User          @relation("UserOrders", fields: [userId], references: [id], onDelete: Cascade)
+  orderItems   OrderItem[]   @relation("OrderOrderItems")
 }
 
 model OrderItem {
