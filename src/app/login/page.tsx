@@ -31,11 +31,11 @@ export default function LoginPage() {
       const { token, user } = await login(formData.email, formData.password);
       setToken(token);
       
-      // Redirect based on user role
+      // Use hard navigation to ensure layout re-mounts and user is fetched immediately
       if (user.role === "ADMIN") {
-        router.push("/admin");
+        window.location.href = "/admin";
       } else {
-        router.push("/");
+        window.location.href = "/";
       }
     } catch (err) {
       setError("Email hoặc mật khẩu không đúng");

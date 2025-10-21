@@ -14,6 +14,7 @@ import {
 } from "@heroicons/react/24/outline"
 import Link from "next/link"
 import { me, updateMe, type AuthUser } from "@/lib/auth"
+import { fetchUserProfile, updateUserProfile } from "@/lib/api"
 import Image from "next/image"
 import ProtectedRoute from "@/components/ProtectedRoute"
 
@@ -30,7 +31,7 @@ interface Order {
   id: string
   date: string
   total: number
-  status: "Đang xử lý" | "Đang giao" | "Đã giao" | "Đã hủy"
+  status: "Đang xử lý" | "Đang giao" | "Đã giao" | "Đã hủy" | "Đã thanh toán"
   items: number
 }
 
@@ -63,7 +64,7 @@ interface OrderItem {
 interface OrderDetail {
   id: string
   date: string
-  status: "Đang xử lý" | "Đang giao" | "Đã giao" | "Đã hủy"
+  status: "Đang xử lý" | "Đang giao" | "Đã giao" | "Đã hủy" | "Đã thanh toán"
   items: OrderItem[]
   subtotal: number
   shipping: number
@@ -100,179 +101,135 @@ function ProfilePageContent() {
 
   useEffect(() => {
     ;(async () => {
-      const u = await me()
-      setAuthUser(u)
-      if (u) {
-        setProfile((prev) => ({
-          ...prev,
-          name: u.name || "",
-          email: u.email,
-        }))
+      try {
+        const u = await me()
+        setAuthUser(u)
+        
+        // Fetch detailed profile from API
+        const userData = await fetchUserProfile()
+        
+        setProfile({
+          name: userData.name || "",
+          email: userData.email || "",
+          phone: userData.phone || "",
+          address: userData.address || "",
+          city: userData.city || "",
+          postalCode: userData.postalCode || "",
+        })
+      } catch (error) {
+        console.error('Error fetching profile:', error)
+        // Fallback to auth user data
+        const u = await me()
+        if (u) {
+          setProfile((prev) => ({
+            ...prev,
+            name: u.name || "",
+            email: u.email,
+          }))
+        }
+      } finally {
+        setLoading(false)
       }
-      setLoading(false)
     })()
   }, [])
 
   const [editedProfile, setEditedProfile] = useState<UserProfile>(profile)
 
-  // Mock order history
-  const orders: Order[] = [
-    { id: "ORD001", date: "2024-01-15", total: 25990000, status: "Đã giao", items: 2 },
-    { id: "ORD002", date: "2024-01-10", total: 15490000, status: "Đang giao", items: 1 },
-    { id: "ORD003", date: "2024-01-05", total: 8990000, status: "Đã giao", items: 3 },
-  ]
+  // Real order history from API
+  const [orders, setOrders] = useState<Order[]>([])
+  const [addresses, setAddresses] = useState<Address[]>([])
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([])
 
-  const [addresses] = useState<Address[]>([
-    {
-      id: "1",
-      name: "Nguyễn Văn A",
-      phone: "0123456789",
-      address: "123 Đường ABC, Quận 1",
-      city: "Hồ Chí Minh",
-      postalCode: "700000",
-      isDefault: true,
-    },
-    {
-      id: "2",
-      name: "Nguyễn Văn A",
-      phone: "0987654321",
-      address: "456 Đường XYZ, Quận 3",
-      city: "Hồ Chí Minh",
-      postalCode: "700000",
-      isDefault: false,
-    },
-  ])
+  // Fetch orders from API
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        const userData = await fetchUserProfile()
+        
+        // Convert API data to Order format
+        const userOrders: Order[] = userData.orders?.map((order: any) => ({
+          id: order.id,
+          date: new Date(order.createdAt).toISOString().split('T')[0],
+          total: order.totalPrice,
+          status: order.status === 'PENDING' ? 'Đang xử lý' : 
+                  order.status === 'PAID' ? 'Đã thanh toán' :
+                  order.status === 'SHIPPED' ? 'Đang giao' :
+                  order.status === 'COMPLETED' ? 'Đã giao' : 'Đã hủy',
+          items: order.orderItems?.length || 0
+        })) || []
+        
+        setOrders(userOrders)
+      } catch (error) {
+        console.error('Error fetching orders:', error)
+        setOrders([])
+      }
+    }
 
-  const [paymentMethods] = useState<PaymentMethod[]>([
-    {
-      id: "1",
-      type: "card",
-      name: "Visa",
-      number: "**** **** **** 1234",
-      isDefault: true,
-    },
-    {
-      id: "2",
-      type: "bank",
-      name: "Vietcombank",
-      number: "**** **** **** 5678",
-      isDefault: false,
-    },
-  ])
+    if (!loading) {
+      fetchOrders()
+    }
+  }, [loading])
 
   const [selectedOrder, setSelectedOrder] = useState<OrderDetail | null>(null)
 
-  const orderDetails: Record<string, OrderDetail> = {
-    ORD001: {
-      id: "ORD001",
-      date: "2024-01-15",
-      status: "Đã giao",
-      items: [
-        {
-          id: "iphone-15-pro",
-          name: "iPhone 15 Pro Max 256GB",
-          image: "/iphone-15-pro-hands.png",
-          price: 29990000,
-          quantity: 1,
+  const handleViewOrderDetails = async (orderId: string) => {
+    try {
+      // For now, we'll use mock data since order detail API might not be implemented
+      // TODO: Implement order detail API endpoint
+      const orderData = {
+        id: orderId,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        totalPrice: 0,
+        status: 'PENDING',
+        orderItems: []
+      }
+      
+      const orderDetail: OrderDetail = {
+        id: orderData.id,
+        date: new Date(orderData.createdAt).toISOString().split('T')[0],
+        status: orderData.status === 'PENDING' ? 'Đang xử lý' : 
+                orderData.status === 'PAID' ? 'Đã thanh toán' :
+                orderData.status === 'SHIPPED' ? 'Đang giao' :
+                orderData.status === 'COMPLETED' ? 'Đã giao' : 'Đã hủy',
+        items: orderData.orderItems?.map((item: any) => ({
+          id: item.product.id,
+          name: item.product.name,
+          image: item.product.image,
+          price: item.product.price,
+          quantity: item.quantity,
+        })) || [],
+        subtotal: orderData.totalPrice,
+        shipping: 0, // This would need to be added to the order model
+        tax: Math.round(orderData.totalPrice * 0.1), // 10% VAT
+        total: orderData.totalPrice,
+        shippingAddress: {
+          name: profile.name || "Chưa có tên",
+          phone: profile.phone || "Chưa có SĐT",
+          address: profile.address || "Chưa có địa chỉ",
         },
-        {
-          id: "airpods-pro-2",
-          name: "AirPods Pro 2 USB-C",
-          image: "/airpods-pro-lifestyle.png",
-          price: 6490000,
-          quantity: 1,
-        },
-      ],
-      subtotal: 36480000,
-      shipping: 0,
-      tax: 3648000,
-      total: 40128000,
-      shippingAddress: {
-        name: "Nguyễn Văn A",
-        phone: "0123456789",
-        address: "123 Đường ABC, Quận 1, Hồ Chí Minh",
-      },
-      paymentMethod: "Visa **** 1234",
-      timeline: [
-        { status: "Đã giao", date: "2024-01-18 14:30", description: "Đơn hàng đã được giao thành công" },
-        { status: "Đang giao", date: "2024-01-17 08:00", description: "Đơn hàng đang được giao đến bạn" },
-        { status: "Đang xử lý", date: "2024-01-16 10:00", description: "Đơn hàng đang được chuẩn bị" },
-        { status: "Đã đặt", date: "2024-01-15 16:45", description: "Đơn hàng đã được đặt thành công" },
-      ],
-    },
-    ORD002: {
-      id: "ORD002",
-      date: "2024-01-10",
-      status: "Đang giao",
-      items: [
-        {
-          id: "macbook-pro-m3",
-          name: "MacBook Pro 14 inch M3 Pro 18GB",
-          image: "/silver-macbook-pro-desk.png",
-          price: 52990000,
-          quantity: 1,
-        },
-      ],
-      subtotal: 52990000,
-      shipping: 0,
-      tax: 5299000,
-      total: 58289000,
-      shippingAddress: {
-        name: "Nguyễn Văn A",
-        phone: "0123456789",
-        address: "123 Đường ABC, Quận 1, Hồ Chí Minh",
-      },
-      paymentMethod: "Visa **** 1234",
-      timeline: [
-        { status: "Đang giao", date: "2024-01-12 08:00", description: "Đơn hàng đang được giao đến bạn" },
-        { status: "Đang xử lý", date: "2024-01-11 10:00", description: "Đơn hàng đang được chuẩn bị" },
-        { status: "Đã đặt", date: "2024-01-10 14:20", description: "Đơn hàng đã được đặt thành công" },
-      ],
-    },
-    ORD003: {
-      id: "ORD003",
-      date: "2024-01-05",
-      status: "Đã giao",
-      items: [
-        {
-          id: "logitech-mx-master-3s",
-          name: "Logitech MX Master 3S Wireless Mouse",
-          image: "/logitech-mouse.jpg",
-          price: 2490000,
-          quantity: 1,
-        },
-        {
-          id: "keychron-k8-pro",
-          name: "Keychron K8 Pro Mechanical Keyboard",
-          image: "/mechanical-keyboard.jpg",
-          price: 3290000,
-          quantity: 1,
-        },
-        {
-          id: "anker-powerbank",
-          name: "Anker PowerCore 20000mAh PD 30W",
-          image: "/power-bank.jpg",
-          price: 1290000,
-          quantity: 2,
-        },
-      ],
-      subtotal: 8360000,
-      shipping: 30000,
-      tax: 836000,
-      total: 9226000,
-      shippingAddress: {
-        name: "Nguyễn Văn A",
-        phone: "0987654321",
-        address: "456 Đường XYZ, Quận 3, Hồ Chí Minh",
-      },
-      paymentMethod: "Vietcombank **** 5678",
-      timeline: [
-        { status: "Đã giao", date: "2024-01-08 15:20", description: "Đơn hàng đã được giao thành công" },
-        { status: "Đang giao", date: "2024-01-07 09:00", description: "Đơn hàng đang được giao đến bạn" },
-        { status: "Đang xử lý", date: "2024-01-06 11:00", description: "Đơn hàng đang được chuẩn bị" },
-        { status: "Đã đặt", date: "2024-01-05 18:30", description: "Đơn hàng đã được đặt thành công" },
-      ],
-    },
+        paymentMethod: "Thanh toán khi nhận hàng", // Default payment method
+        timeline: [
+          { 
+            status: orderData.status === 'PENDING' ? 'Đang xử lý' : 
+                    orderData.status === 'PAID' ? 'Đã thanh toán' :
+                    orderData.status === 'SHIPPED' ? 'Đang giao' :
+                    orderData.status === 'COMPLETED' ? 'Đã giao' : 'Đã hủy', 
+            date: new Date(orderData.updatedAt).toLocaleString('vi-VN'), 
+            description: "Cập nhật trạng thái đơn hàng" 
+          },
+          { 
+            status: "Đã đặt", 
+            date: new Date(orderData.createdAt).toLocaleString('vi-VN'), 
+            description: "Đơn hàng đã được đặt thành công" 
+          },
+        ],
+      }
+      
+      setSelectedOrder(orderDetail)
+    } catch (error) {
+      console.error('Error fetching order details:', error)
+    }
   }
 
   const [saving, setSaving] = useState(false)
@@ -282,11 +239,28 @@ function ProfilePageContent() {
     try {
       setSaving(true)
       setSaveError("")
-      const updated = await updateMe({ name: editedProfile.name })
-      setProfile((prev) => ({ ...prev, name: updated.name || "" }))
+      
+      // Update profile via API
+      const updatedUser = await updateUserProfile({
+        name: editedProfile.name,
+        phone: editedProfile.phone,
+        address: editedProfile.address,
+        city: editedProfile.city,
+        postalCode: editedProfile.postalCode,
+      })
+      
+      setProfile({
+        name: updatedUser.name || "",
+        email: updatedUser.email || "",
+        phone: updatedUser.phone || "",
+        address: updatedUser.address || "",
+        city: updatedUser.city || "",
+        postalCode: updatedUser.postalCode || "",
+      })
       setIsEditing(false)
     } catch (e) {
       setSaveError("Cập nhật thất bại")
+      console.error('Error updating profile:', e)
     } finally {
       setSaving(false)
     }
@@ -589,10 +563,10 @@ function ProfilePageContent() {
                     <input
                       type="email"
                       value={isEditing ? editedProfile.email : profile.email}
-                      onChange={(e) => setEditedProfile({ ...editedProfile, email: e.target.value })}
-                      disabled={!isEditing}
+                      disabled={true}
                       className="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-60 text-foreground"
                     />
+                    <p className="text-xs text-muted-foreground mt-1">Email không thể thay đổi</p>
                   </div>
 
                   <div>
@@ -667,7 +641,7 @@ function ProfilePageContent() {
                         <div className="text-right">
                           <p className="text-lg font-bold text-foreground">{order.total.toLocaleString("vi-VN")}₫</p>
                           <button
-                            onClick={() => setSelectedOrder(orderDetails[order.id])}
+                            onClick={() => handleViewOrderDetails(order.id)}
                             className="text-sm text-primary hover:underline"
                           >
                             Xem chi tiết
@@ -690,39 +664,37 @@ function ProfilePageContent() {
                   </button>
                 </div>
 
-                <div className="space-y-4">
-                  {addresses.map((address) => (
-                    <div key={address.id} className="border border-border rounded-lg p-4">
+                {profile.address ? (
+                  <div className="space-y-4">
+                    <div className="border border-border rounded-lg p-4">
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-2">
-                            <p className="font-semibold text-foreground">{address.name}</p>
-                            {address.isDefault && (
-                              <span className="px-2 py-0.5 bg-primary/10 text-primary text-xs rounded-full">
-                                Mặc định
-                              </span>
-                            )}
+                            <p className="font-semibold text-foreground">{profile.name || "Chưa có tên"}</p>
+                            <span className="px-2 py-0.5 bg-primary/10 text-primary text-xs rounded-full">
+                              Mặc định
+                            </span>
                           </div>
-                          <p className="text-sm text-muted-foreground mb-1">{address.phone}</p>
+                          <p className="text-sm text-muted-foreground mb-1">{profile.phone || "Chưa có SĐT"}</p>
                           <p className="text-sm text-foreground">
-                            {address.address}, {address.city}, {address.postalCode}
+                            {profile.address}, {profile.city}, {profile.postalCode}
                           </p>
                         </div>
                         <div className="flex gap-2">
                           <button className="p-2 hover:bg-secondary rounded-lg transition-colors">
                             <PencilIcon className="w-4 h-4 text-foreground" />
                           </button>
-                          <button className="p-2 hover:bg-secondary rounded-lg transition-colors">
-                            <TrashIcon className="w-4 h-4 text-destructive" />
-                          </button>
                         </div>
                       </div>
-                      {!address.isDefault && (
-                        <button className="text-sm text-primary hover:underline">Đặt làm mặc định</button>
-                      )}
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <MapPinIcon className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground mb-4">Chưa có địa chỉ giao hàng</p>
+                    <p className="text-sm text-muted-foreground">Cập nhật thông tin cá nhân để thêm địa chỉ giao hàng</p>
+                  </div>
+                )}
               </div>
             )}
 
@@ -736,43 +708,10 @@ function ProfilePageContent() {
                   </button>
                 </div>
 
-                <div className="space-y-4">
-                  {paymentMethods.map((method) => (
-                    <div key={method.id} className="border border-border rounded-lg p-4">
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
-                            <CreditCardIcon className="w-6 h-6 text-primary" />
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-2 mb-1">
-                              <p className="font-semibold text-foreground">{method.name}</p>
-                              {method.isDefault && (
-                                <span className="px-2 py-0.5 bg-primary/10 text-primary text-xs rounded-full">
-                                  Mặc định
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-sm text-muted-foreground">{method.number}</p>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {method.type === "card" ? "Thẻ tín dụng" : "Tài khoản ngân hàng"}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                          <button className="p-2 hover:bg-secondary rounded-lg transition-colors">
-                            <PencilIcon className="w-4 h-4 text-foreground" />
-                          </button>
-                          <button className="p-2 hover:bg-secondary rounded-lg transition-colors">
-                            <TrashIcon className="w-4 h-4 text-destructive" />
-                          </button>
-                        </div>
-                      </div>
-                      {!method.isDefault && (
-                        <button className="text-sm text-primary hover:underline">Đặt làm mặc định</button>
-                      )}
-                    </div>
-                  ))}
+                <div className="text-center py-12">
+                  <CreditCardIcon className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground mb-4">Chưa có phương thức thanh toán</p>
+                  <p className="text-sm text-muted-foreground">Tính năng này sẽ được triển khai trong phiên bản tiếp theo</p>
                 </div>
               </div>
             )}

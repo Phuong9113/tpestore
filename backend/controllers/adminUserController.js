@@ -24,9 +24,23 @@ export const getAdminUsers = async (req, res) => {
           id: true,
           name: true,
           email: true,
+          phone: true,
+          address: true,
+          city: true,
+          postalCode: true,
+          avatar: true,
           role: true,
+          isActive: true,
           createdAt: true,
           updatedAt: true,
+          orders: {
+            where: {
+              status: 'COMPLETED'
+            },
+            select: {
+              totalPrice: true
+            }
+          },
           _count: {
             select: {
               orders: true,
@@ -65,7 +79,13 @@ export const getAdminUserById = async (req, res) => {
         id: true,
         name: true,
         email: true,
+        phone: true,
+        address: true,
+        city: true,
+        postalCode: true,
+        avatar: true,
         role: true,
+        isActive: true,
         createdAt: true,
         updatedAt: true,
         orders: {
@@ -104,7 +124,7 @@ export const getAdminUserById = async (req, res) => {
 export const updateUser = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, email, role } = req.body;
+    const { name, email, phone, address, city, postalCode, avatar } = req.body;
     
     // Check if user exists
     const existingUser = await prisma.user.findUnique({ where: { id } });
@@ -126,25 +146,31 @@ export const updateUser = async (req, res) => {
       }
     }
     
-    // Validate role
-    const validRoles = ['USER', 'ADMIN'];
-    if (role && !validRoles.includes(role)) {
-      return res.status(400).json({ error: 'Invalid role. Must be USER or ADMIN' });
-    }
+    // Note: Role and isActive changes are handled manually in database
     
     // Update user
     const user = await prisma.user.update({
       where: { id },
       data: {
-        ...(name && { name }),
+        ...(name !== undefined && { name }),
         ...(email && { email }),
-        ...(role && { role })
+        ...(phone !== undefined && { phone }),
+        ...(address !== undefined && { address }),
+        ...(city !== undefined && { city }),
+        ...(postalCode !== undefined && { postalCode }),
+        ...(avatar !== undefined && { avatar })
       },
       select: {
         id: true,
         name: true,
         email: true,
+        phone: true,
+        address: true,
+        city: true,
+        postalCode: true,
+        avatar: true,
         role: true,
+        isActive: true,
         createdAt: true,
         updatedAt: true
       }
@@ -199,7 +225,7 @@ export const getUserStats = async (req, res) => {
     ] = await Promise.all([
       prisma.user.count(),
       prisma.user.count({ where: { role: 'ADMIN' } }),
-      prisma.user.count({ where: { role: 'USER' } }),
+      prisma.user.count({ where: { role: 'CUSTOMER' } }),
       prisma.user.count({
         where: {
           createdAt: {

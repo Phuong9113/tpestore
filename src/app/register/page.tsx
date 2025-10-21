@@ -4,7 +4,7 @@ import type React from "react";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { register as apiRegister, setToken } from "@/lib/auth";
+import { register as apiRegister } from "@/lib/auth";
 import { useState } from "react";
 import {
   EnvelopeIcon,
@@ -39,11 +39,9 @@ export default function RegisterPage() {
     }
     setLoading(true);
     try {
-      const { token, user } = await apiRegister(formData.name, formData.email, formData.password);
-      setToken(token);
-      
-      // New users are always CUSTOMER role, redirect to home
-      router.push("/");
+      await apiRegister(formData.name, formData.email, formData.password);
+      // Redirect to login after successful registration
+      router.push("/login");
     } catch (err) {
       setError("Đăng ký thất bại, email có thể đã tồn tại");
     } finally {

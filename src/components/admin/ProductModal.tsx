@@ -9,12 +9,13 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { createProduct, updateProduct, fetchCategories, type AdminProduct, type ApiCategory } from "@/lib/api"
+import { createProduct, updateProduct, fetchCategories, uploadImage, type AdminProduct, type ApiCategory } from "@/lib/api"
 
 interface ProductModalProps {
   isOpen: boolean
   onClose: () => void
   product?: AdminProduct | null
+  categories?: ApiCategory[]
 }
 
 interface SpecValue {
@@ -22,15 +23,15 @@ interface SpecValue {
   value: string
 }
 
-export default function ProductModal({ isOpen, onClose, product }: ProductModalProps) {
+export default function ProductModal({ isOpen, onClose, product, categories: categoriesProp }: ProductModalProps) {
   const [formData, setFormData] = useState({
     name: "",
     price: "",
-    originalPrice: "",
     categoryId: "",
     description: "",
     image: "",
     inStock: true,
+    stock: "",
   })
   const [categories, setCategories] = useState<ApiCategory[]>([])
   const [specValues, setSpecValues] = useState<SpecValue[]>([])
@@ -38,19 +39,24 @@ export default function ProductModal({ isOpen, onClose, product }: ProductModalP
   const [error, setError] = useState("")
 
   useEffect(() => {
-    loadCategories()
-  }, [])
+    if (!isOpen) return
+    if (categoriesProp && categoriesProp.length > 0) {
+      setCategories(categoriesProp)
+    } else {
+      loadCategories()
+    }
+  }, [isOpen, categoriesProp])
 
   useEffect(() => {
     if (product) {
       setFormData({
         name: product.name,
         price: product.price.toString(),
-        originalPrice: product.originalPrice?.toString() || "",
-        categoryId: product.category?.id || "",
+        categoryId: (product as any).categoryId || product.category?.id || "",
         description: product.description || "",
         image: product.image || "",
         inStock: product.inStock,
+        stock: (product as any).stock?.toString?.() || (product.inStock ? "1" : "0"),
       })
       // Load existing specs
       setSpecValues(product.specs?.map(spec => ({
@@ -61,16 +67,23 @@ export default function ProductModal({ isOpen, onClose, product }: ProductModalP
       setFormData({
         name: "",
         price: "",
-        originalPrice: "",
         categoryId: "",
         description: "",
         image: "",
         inStock: true,
+        stock: "",
       })
       setSpecValues([])
     }
     setError("")
   }, [product, isOpen])
+
+  // Ensure categoryId reflects existing product once categories are loaded
+  useEffect(() => {
+    if (!isOpen || !product) return
+    // Keep categoryId in sync when category list loads; prefer raw categoryId if present
+    setFormData(prev => ({ ...prev, categoryId: (product as any).categoryId || product.category?.id || "" }))
+  }, [categories, isOpen, product])
 
   const loadCategories = async () => {
     try {
@@ -107,7 +120,8 @@ export default function ProductModal({ isOpen, onClose, product }: ProductModalP
       const productData = {
         ...formData,
         price: parseFloat(formData.price),
-        originalPrice: formData.originalPrice ? parseFloat(formData.originalPrice) : undefined,
+        categoryId: formData.categoryId,
+        stock: formData.stock ? parseInt(formData.stock) : undefined,
         specs: specValues.filter(spec => spec.value.trim()).map(spec => ({
           specFieldId: spec.specFieldId,
           value: spec.value
@@ -167,38 +181,27 @@ export default function ProductModal({ isOpen, onClose, product }: ProductModalP
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="price">Giá bán (₫) *</Label>
-                <Input
-                  id="price"
-                  type="number"
-                  value={formData.price}
-                  onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                  placeholder="0"
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="originalPrice">Giá gốc (₫)</Label>
-                <Input
-                  id="originalPrice"
-                  type="number"
-                  value={formData.originalPrice}
-                  onChange={(e) => setFormData({ ...formData, originalPrice: e.target.value })}
-                  placeholder="0"
-                />
-              </div>
+            <div>
+              <Label htmlFor="price">Giá bán (₫) *</Label>
+              <Input
+                id="price"
+                type="number"
+                value={formData.price}
+                onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                placeholder="0"
+                required
+              />
             </div>
 
             <div>
               <Label htmlFor="category">Danh mục *</Label>
               <Select
+                key={formData.categoryId || 'cat-select'}
                 value={formData.categoryId}
                 onValueChange={(value) => setFormData({ ...formData, categoryId: value })}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Chọn danh mục" />
+                  <SelectValue placeholder={formData.categoryId ? (categories.find(c => c.id === formData.categoryId)?.name || 'Chọn danh mục') : 'Chọn danh mục'} />
                 </SelectTrigger>
                 <SelectContent>
                   {categories.map((category) => (
@@ -210,14 +213,51 @@ export default function ProductModal({ isOpen, onClose, product }: ProductModalP
               </Select>
             </div>
 
-            <div>
+            <div className="space-y-2">
               <Label htmlFor="image">Hình ảnh</Label>
-              <Input
-                id="image"
-                value={formData.image}
-                onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-                placeholder="URL hình ảnh"
-              />
+              {formData.image && (
+                <div className="flex items-center gap-3">
+                  <img src={formData.image} alt="preview" className="w-16 h-16 rounded object-cover border border-border" />
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, image: "" })}
+                    className="text-sm text-red-500 hover:underline"
+                  >
+                    Xóa ảnh
+                  </button>
+                </div>
+              )}
+              <div className="flex items-center gap-2">
+                <Input
+                  id="image"
+                  value={formData.image}
+                  onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+                  placeholder="URL hình ảnh"
+                />
+                <label className="px-3 py-2 border border-border rounded bg-muted hover:bg-muted/80 cursor-pointer text-sm">
+                  Tải ảnh
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const inputEl = e.currentTarget
+                      const file = inputEl.files?.[0]
+                      if (!file) return
+                      try {
+                        setLoading(true)
+                        const url = await uploadImage(file)
+                        setFormData({ ...formData, image: url })
+                      } catch (err) {
+                        setError("Tải ảnh thất bại")
+                      } finally {
+                        setLoading(false)
+                        if (inputEl) inputEl.value = ''
+                      }
+                    }}
+                  />
+                </label>
+              </div>
             </div>
 
             <div>
@@ -231,20 +271,32 @@ export default function ProductModal({ isOpen, onClose, product }: ProductModalP
               />
             </div>
 
-            <div>
-              <Label htmlFor="inStock">Trạng thái</Label>
-              <Select
-                value={formData.inStock ? "true" : "false"}
-                onValueChange={(value) => setFormData({ ...formData, inStock: value === "true" })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="true">Còn hàng</SelectItem>
-                  <SelectItem value="false">Hết hàng</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Trạng thái</Label>
+                <Select
+                  value={formData.inStock ? "true" : "false"}
+                  onValueChange={(value) => setFormData({ ...formData, inStock: value === "true" })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="true">Còn hàng</SelectItem>
+                    <SelectItem value="false">Hết hàng</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Số lượng (nếu còn hàng)</Label>
+                <Input
+                  type="number"
+                  value={formData.stock}
+                  onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
+                  placeholder="Ví dụ: 10"
+                  disabled={!formData.inStock}
+                />
+              </div>
             </div>
           </div>
 

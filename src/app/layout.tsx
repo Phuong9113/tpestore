@@ -8,7 +8,7 @@ import { CartProvider } from "@/contexts/CartContext"
 import ConditionalLayout from "@/components/ConditionalLayout"
 
 export const metadata: Metadata = {
-  title: "TPE Store - Electronics & Technology",
+  title: "TPE Store",
   description: "Your trusted destination for the latest electronics and technology products",
   generator: "v0.app",
 }

@@ -1,12 +1,14 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, type ChangeEvent } from "react"
 import { PlusIcon, PencilIcon, TrashIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline"
 import ProductModal from "@/components/admin/ProductModal"
 import { 
   fetchAdminProducts, 
   deleteProduct, 
   fetchCategories,
+  getProductTemplateUrl,
+  importProductsFromExcel,
   type AdminProduct 
 } from "@/lib/api"
 
@@ -19,6 +21,31 @@ export default function ProductsPage() {
   const [categories, setCategories] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
+  const [importing, setImporting] = useState(false)
+  const [isTemplatePickerOpen, setIsTemplatePickerOpen] = useState(false)
+  const [templateCategoryId, setTemplateCategoryId] = useState<string>("")
+  const [downloading, setDownloading] = useState(false)
+
+  const handleDownloadTemplate = async (categoryId: string) => {
+    try {
+      setDownloading(true)
+      const url = getProductTemplateUrl(categoryId)
+      // Tải trực tiếp bằng điều hướng để tránh các vấn đề blob/CORS
+      const cat = categories.find((c: any) => c.id === categoryId)
+      const filename = cat?.name ? `template-${cat.name}.xlsx` : 'template.xlsx'
+      const anchor = document.createElement('a')
+      anchor.href = url
+      anchor.download = filename
+      document.body.appendChild(anchor)
+      anchor.click()
+      anchor.remove()
+      setIsTemplatePickerOpen(false)
+    } catch {
+      alert('Đã xảy ra lỗi khi tải mẫu')
+    } finally {
+      setDownloading(false)
+    }
+  }
 
   useEffect(() => {
     loadData()
@@ -27,15 +54,23 @@ export default function ProductsPage() {
   const loadData = async () => {
     try {
       setLoading(true)
-      const [productsData, categoriesData] = await Promise.all([
+      const [productsResult, categoriesResult] = await Promise.allSettled([
         fetchAdminProducts({
           search: searchQuery || undefined,
           categoryId: selectedCategory !== "all" ? selectedCategory : undefined
         }),
         fetchCategories()
       ])
-      setProducts(productsData.products)
-      setCategories(categoriesData)
+
+      if (productsResult.status === 'fulfilled') {
+        setProducts(productsResult.value.products)
+        setError("")
+      } else {
+        setError("Không thể tải dữ liệu sản phẩm")
+      }
+      if (categoriesResult.status === 'fulfilled') {
+        setCategories(categoriesResult.value)
+      }
     } catch (err) {
       setError("Không thể tải dữ liệu sản phẩm")
     } finally {
@@ -83,14 +118,81 @@ export default function ProductsPage() {
           <h1 className="text-3xl font-bold text-foreground">Quản lý sản phẩm</h1>
           <p className="text-muted-foreground mt-1">Quản lý danh sách sản phẩm trong cửa hàng</p>
         </div>
-        <button
-          onClick={handleAddNew}
-          className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
-        >
-          <PlusIcon className="w-5 h-5" />
-          Thêm sản phẩm
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setIsTemplatePickerOpen((v) => !v)}
+            className={`px-4 py-2 rounded-lg text-sm transition-colors border bg-primary/10 text-primary hover:bg-primary/20 border-primary/30`}
+          >
+            Tải mẫu Excel theo danh mục
+          </button>
+          <label className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 cursor-pointer text-sm">
+            Nhập Excel
+            <input
+              type="file"
+              accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+              className="hidden"
+              onChange={async (e: ChangeEvent<HTMLInputElement>) => {
+                const inputEl = e.currentTarget
+                const file = inputEl.files?.[0]
+                if (!file) return
+                if (selectedCategory === 'all') { alert('Hãy chọn danh mục trước khi nhập.'); e.currentTarget.value = ''; return }
+                try {
+                  setImporting(true)
+                  const result = await importProductsFromExcel(selectedCategory, file)
+                  alert(`Đã nhập ${result.imported} sản phẩm`)
+                  await loadData()
+                } catch (err) {
+                  alert('Không thể nhập file Excel')
+                } finally {
+                  setImporting(false)
+                  if (inputEl) inputEl.value = ''
+                }
+              }}
+            />
+          </label>
+          <button
+            onClick={handleAddNew}
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+          >
+            <PlusIcon className="w-5 h-5" />
+            Thêm sản phẩm
+          </button>
+        </div>
       </div>
+      {isTemplatePickerOpen && (
+        <div className="flex items-center gap-2 bg-card border border-border rounded-lg p-3">
+          <span className="text-sm text-muted-foreground">Chọn danh mục:</span>
+          <select
+            value={templateCategoryId}
+            onChange={(e) => setTemplateCategoryId(e.target.value)}
+            className="px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+          >
+            <option value="">-- Chọn danh mục --</option>
+            {categories.map((cat: any) => (
+              <option key={cat.id} value={cat.id}>{cat.name}</option>
+            ))}
+          </select>
+          <button
+            type="button"
+            disabled={!templateCategoryId || downloading}
+            onClick={() => {
+              if (!templateCategoryId) { alert('Hãy chọn danh mục để tải mẫu.'); return }
+              handleDownloadTemplate(templateCategoryId)
+            }}
+            className={`px-4 py-2 rounded-lg text-sm ${!templateCategoryId || downloading ? 'bg-muted text-muted-foreground cursor-not-allowed' : 'bg-primary text-primary-foreground hover:bg-primary/90'}`}
+          >
+            {downloading ? 'Đang tải...' : 'Tải'}
+          </button>
+          <button
+            type="button"
+            onClick={() => { setIsTemplatePickerOpen(false); setTemplateCategoryId("") }}
+            className="px-4 py-2 bg-muted text-foreground rounded-lg hover:bg-muted/80 text-sm"
+          >
+            Hủy
+          </button>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="bg-card border border-border rounded-lg p-4">
@@ -137,9 +239,6 @@ export default function ProductsPage() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Trạng thái
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Đánh giá
-                </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Thao tác
                 </th>
@@ -148,13 +247,13 @@ export default function ProductsPage() {
             <tbody className="divide-y divide-border">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-muted-foreground">
+                  <td colSpan={5} className="px-6 py-12 text-center text-muted-foreground">
                     Đang tải...
                   </td>
                 </tr>
               ) : error ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-red-500">
+                  <td colSpan={5} className="px-6 py-12 text-center text-red-500">
                     {error}
                   </td>
                 </tr>
@@ -198,17 +297,6 @@ export default function ProductsPage() {
                     </span>
                   </td>
                   <td className="px-6 py-4">
-                    <div className="flex items-center gap-1">
-                      <span className="text-yellow-500">★</span>
-                      <span className="text-sm text-foreground">
-                        {product.reviews?.length ? 
-                          Math.round(product.reviews.reduce((sum, r) => sum + r.rating, 0) / product.reviews.length) : 
-                          0
-                        }
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
                     <div className="flex items-center justify-end gap-2">
                       <button
                         onClick={() => handleEdit(product)}
@@ -238,7 +326,7 @@ export default function ProductsPage() {
       </div>
 
       {/* Product Modal */}
-      <ProductModal isOpen={isModalOpen} onClose={handleModalClose} product={editingProduct} />
+      <ProductModal isOpen={isModalOpen} onClose={handleModalClose} product={editingProduct} categories={categories} />
     </div>
   )
 }

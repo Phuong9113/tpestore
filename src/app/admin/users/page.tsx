@@ -1,97 +1,61 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { MagnifyingGlassIcon, UserPlusIcon, PencilIcon, TrashIcon, ShieldCheckIcon } from "@heroicons/react/24/outline"
 import UserModal from "@/components/admin/UserModal"
+import { fetchAdminUsers, updateUser, deleteUser, type AdminUser } from "@/lib/api"
 
-const initialUsers = [
-  {
-    id: "1",
-    name: "Nguyễn Văn A",
-    email: "nguyenvana@example.com",
-    phone: "0901234567",
-    role: "customer",
-    status: "active",
-    orders: 12,
-    totalSpent: 45000000,
-    joinedDate: "2024-01-15",
-    avatar: "/placeholder.svg?height=40&width=40",
-  },
-  {
-    id: "2",
-    name: "Trần Thị B",
-    email: "tranthib@example.com",
-    phone: "0912345678",
-    role: "customer",
-    status: "active",
-    orders: 8,
-    totalSpent: 28000000,
-    joinedDate: "2024-02-20",
-    avatar: "/placeholder.svg?height=40&width=40",
-  },
-  {
-    id: "3",
-    name: "Lê Văn C",
-    email: "levanc@example.com",
-    phone: "0923456789",
-    role: "admin",
-    status: "active",
-    orders: 0,
-    totalSpent: 0,
-    joinedDate: "2023-12-01",
-    avatar: "/placeholder.svg?height=40&width=40",
-  },
-  {
-    id: "4",
-    name: "Phạm Thị D",
-    email: "phamthid@example.com",
-    phone: "0934567890",
-    role: "customer",
-    status: "inactive",
-    orders: 3,
-    totalSpent: 12000000,
-    joinedDate: "2024-03-10",
-    avatar: "/placeholder.svg?height=40&width=40",
-  },
-  {
-    id: "5",
-    name: "Hoàng Văn E",
-    email: "hoangvane@example.com",
-    phone: "0945678901",
-    role: "staff",
-    status: "active",
-    orders: 0,
-    totalSpent: 0,
-    joinedDate: "2024-01-05",
-    avatar: "/placeholder.svg?height=40&width=40",
-  },
-]
+type User = AdminUser
 
 export default function UsersPage() {
-  const [users, setUsers] = useState(initialUsers)
+  const [users, setUsers] = useState<User[]>([])
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedRole, setSelectedRole] = useState("all")
-  const [selectedStatus, setSelectedStatus] = useState("all")
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [editingUser, setEditingUser] = useState<any>(null)
+  const [editingUser, setEditingUser] = useState<User | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
+
+  // Fetch users from API
+  useEffect(() => {
+    fetchUsers()
+  }, [])
+
+  const fetchUsers = async () => {
+    try {
+      setLoading(true)
+      const response = await fetchAdminUsers()
+      setUsers(response.users || [])
+    } catch (err) {
+      setError('Không thể tải danh sách người dùng')
+      console.error('Error fetching users:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const filteredUsers = users.filter((user) => {
     const matchesSearch =
-      user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (user.name?.toLowerCase().includes(searchQuery.toLowerCase()) || false) ||
       user.email.toLowerCase().includes(searchQuery.toLowerCase())
     const matchesRole = selectedRole === "all" || user.role === selectedRole
-    const matchesStatus = selectedStatus === "all" || user.status === selectedStatus
-    return matchesSearch && matchesRole && matchesStatus
+    return matchesSearch && matchesRole
   })
 
-  const handleEdit = (user: any) => {
+  const handleEdit = (user: User) => {
     setEditingUser(user)
     setIsModalOpen(true)
   }
 
-  const handleDelete = (userId: string) => {
+  const handleDelete = async (userId: string) => {
     if (confirm("Bạn có chắc chắn muốn xóa người dùng này?")) {
-      setUsers(users.filter((user) => user.id !== userId))
+      try {
+        await deleteUser(userId)
+        setUsers(users.filter((user) => user.id !== userId))
+      } catch (err) {
+        setError('Không thể xóa người dùng')
+        console.error('Error deleting user:', err)
+      }
     }
   }
 
@@ -100,35 +64,48 @@ export default function UsersPage() {
     setIsModalOpen(true)
   }
 
-  const handleSave = (userData: any) => {
-    if (editingUser) {
-      setUsers(users.map((user) => (user.id === editingUser.id ? { ...user, ...userData } : user)))
-    } else {
-      const newUser = {
-        id: Date.now().toString(),
-        ...userData,
-        orders: 0,
-        totalSpent: 0,
-        joinedDate: new Date().toISOString().split("T")[0],
-        avatar: "/placeholder.svg?height=40&width=40",
+  const handleSave = async (userData: any) => {
+    try {
+      if (editingUser) {
+        // Update existing user
+        const updatedUser = await updateUser(editingUser.id, userData)
+        setUsers(users.map((user) => (user.id === editingUser.id ? updatedUser : user)))
+      } else {
+        // Create new user - this would need to be implemented in backend
+        setError('Chức năng tạo người dùng mới chưa được triển khai')
+        return
       }
-      setUsers([...users, newUser])
+      setIsModalOpen(false)
+    } catch (err) {
+      setError('Không thể lưu thông tin người dùng')
+      console.error('Error saving user:', err)
     }
   }
 
   const roleConfig = {
-    admin: { label: "Quản trị viên", color: "bg-red-500/10 text-red-500" },
-    staff: { label: "Nhân viên", color: "bg-blue-500/10 text-blue-500" },
-    customer: { label: "Khách hàng", color: "bg-green-500/10 text-green-500" },
+    ADMIN: { label: "Quản trị viên", color: "bg-red-500/10 text-red-500" },
+    CUSTOMER: { label: "Khách hàng", color: "bg-green-500/10 text-green-500" },
   }
 
-  const statusConfig = {
-    active: { label: "Hoạt động", color: "bg-green-500/10 text-green-500" },
-    inactive: { label: "Không hoạt động", color: "bg-gray-500/10 text-gray-500" },
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-muted-foreground">Đang tải...</div>
+      </div>
+    )
   }
 
   return (
     <div className="space-y-6">
+      {/* Error Message */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+          {error}
+        </div>
+      )}
+
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -145,24 +122,20 @@ export default function UsersPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-card border border-border rounded-lg p-6">
           <p className="text-sm text-muted-foreground">Tổng người dùng</p>
           <p className="text-2xl font-bold text-foreground mt-2">{users.length}</p>
         </div>
         <div className="bg-card border border-border rounded-lg p-6">
           <p className="text-sm text-muted-foreground">Khách hàng</p>
-          <p className="text-2xl font-bold text-foreground mt-2">{users.filter((u) => u.role === "customer").length}</p>
+          <p className="text-2xl font-bold text-foreground mt-2">{users.filter((u) => u.role === "CUSTOMER").length}</p>
         </div>
         <div className="bg-card border border-border rounded-lg p-6">
-          <p className="text-sm text-muted-foreground">Nhân viên</p>
+          <p className="text-sm text-muted-foreground">Quản trị viên</p>
           <p className="text-2xl font-bold text-foreground mt-2">
-            {users.filter((u) => u.role === "staff" || u.role === "admin").length}
+            {users.filter((u) => u.role === "ADMIN").length}
           </p>
-        </div>
-        <div className="bg-card border border-border rounded-lg p-6">
-          <p className="text-sm text-muted-foreground">Đang hoạt động</p>
-          <p className="text-2xl font-bold text-foreground mt-2">{users.filter((u) => u.status === "active").length}</p>
         </div>
       </div>
 
@@ -185,18 +158,8 @@ export default function UsersPage() {
             className="px-4 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
           >
             <option value="all">Tất cả vai trò</option>
-            <option value="admin">Quản trị viên</option>
-            <option value="staff">Nhân viên</option>
-            <option value="customer">Khách hàng</option>
-          </select>
-          <select
-            value={selectedStatus}
-            onChange={(e) => setSelectedStatus(e.target.value)}
-            className="px-4 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-          >
-            <option value="all">Tất cả trạng thái</option>
-            <option value="active">Hoạt động</option>
-            <option value="inactive">Không hoạt động</option>
+            <option value="ADMIN">Quản trị viên</option>
+            <option value="CUSTOMER">Khách hàng</option>
           </select>
         </div>
       </div>
@@ -217,13 +180,10 @@ export default function UsersPage() {
                   Vai trò
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Trạng thái
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Đơn hàng
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Tổng chi tiêu
+                  Tổng chi tiêu (đã hoàn thành)
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Thao tác
@@ -237,21 +197,21 @@ export default function UsersPage() {
                     <div className="flex items-center gap-3">
                       <img
                         src={user.avatar || "/placeholder.svg"}
-                        alt={user.name}
+                        alt={user.name || "User"}
                         className="w-10 h-10 rounded-full bg-muted"
                       />
                       <div>
                         <p className="text-sm font-medium text-foreground flex items-center gap-2">
-                          {user.name}
-                          {user.role === "admin" && <ShieldCheckIcon className="w-4 h-4 text-red-500" />}
+                          {user.name || "Chưa có tên"}
+                          {user.role === "ADMIN" && <ShieldCheckIcon className="w-4 h-4 text-red-500" />}
                         </p>
-                        <p className="text-xs text-muted-foreground">Tham gia: {user.joinedDate}</p>
+                        <p className="text-xs text-muted-foreground">Tham gia: {new Date(user.createdAt).toLocaleDateString('vi-VN')}</p>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4">
                     <p className="text-sm text-foreground">{user.email}</p>
-                    <p className="text-xs text-muted-foreground">{user.phone}</p>
+                    <p className="text-xs text-muted-foreground">{user.phone || "Chưa có SĐT"}</p>
                   </td>
                   <td className="px-6 py-4">
                     <span
@@ -261,18 +221,11 @@ export default function UsersPage() {
                     </span>
                   </td>
                   <td className="px-6 py-4">
-                    <span
-                      className={`px-2.5 py-1 rounded-full text-xs font-medium ${statusConfig[user.status as keyof typeof statusConfig].color}`}
-                    >
-                      {statusConfig[user.status as keyof typeof statusConfig].label}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="text-sm text-foreground">{user.orders}</span>
+                    <span className="text-sm text-foreground">{user._count?.orders || 0}</span>
                   </td>
                   <td className="px-6 py-4">
                     <span className="text-sm font-medium text-foreground">
-                      {user.totalSpent.toLocaleString("vi-VN")}₫
+                      {user.orders?.reduce((total, order) => total + order.totalPrice, 0).toLocaleString('vi-VN')}₫
                     </span>
                   </td>
                   <td className="px-6 py-4">

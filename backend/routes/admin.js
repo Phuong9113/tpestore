@@ -4,8 +4,11 @@ import {
   getAdminProductById, 
   createProduct, 
   updateProduct, 
-  deleteProduct 
+  deleteProduct,
+  downloadProductTemplate,
+  importProductsFromExcel
 } from '../controllers/adminProductController.js';
+import multer from 'multer';
 import { 
   getAdminCategories, 
   getAdminCategoryById, 
@@ -24,6 +27,9 @@ import { requireAdmin } from '../middleware/auth.js';
 
 const router = express.Router();
 
+// Public: Excel template (no admin auth required)
+router.get('/products/template/:categoryId', downloadProductTemplate);
+
 // All admin routes require admin authentication
 router.use(requireAdmin);
 
@@ -33,6 +39,9 @@ router.get('/products/:id', getAdminProductById);
 router.post('/products', createProduct);
 router.put('/products/:id', updateProduct);
 router.delete('/products/:id', deleteProduct);
+// Excel import (admin only)
+const excelUpload = multer({ storage: multer.memoryStorage() });
+router.post('/products/import', excelUpload.single('file'), importProductsFromExcel);
 
 // Category management
 router.get('/categories', getAdminCategories);

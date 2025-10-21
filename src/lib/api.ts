@@ -124,11 +124,32 @@ export interface AdminCategory extends ApiCategory {
 
 export interface AdminUser {
   id: string;
-  name: string;
+  name: string | null;
   email: string;
-  role: 'USER' | 'ADMIN';
+  phone: string | null;
+  address: string | null;
+  city: string | null;
+  postalCode: string | null;
+  avatar: string | null;
+  role: 'CUSTOMER' | 'ADMIN';
+  isActive: boolean;
   createdAt: string;
   updatedAt: string;
+  orders?: Array<{
+    id?: string;
+    totalPrice: number;
+    status?: string;
+    createdAt?: string;
+    orderItems?: Array<{
+      quantity: number;
+      product: {
+        id: string;
+        name: string;
+        image: string;
+        price: number;
+      };
+    }>;
+  }>;
   _count?: {
     orders: number;
     reviews: number;
@@ -137,7 +158,7 @@ export interface AdminUser {
 
 // Auth helper
 function getAuthHeaders(): HeadersInit {
-  const token = localStorage.getItem('token');
+  const token = typeof window !== 'undefined' ? localStorage.getItem('tpestore_token') : null;
   return {
     'Content-Type': 'application/json',
     ...(token && { Authorization: `Bearer ${token}` }),
@@ -168,7 +189,6 @@ export interface CreateProductData {
   name: string;
   description?: string;
   price: number;
-  originalPrice?: number;
   image?: string;
   categoryId: string;
   inStock: boolean;
@@ -176,6 +196,7 @@ export interface CreateProductData {
     specFieldId: string;
     value: string;
   }>;
+  stock?: number;
 }
 
 export async function createProduct(productData: CreateProductData): Promise<AdminProduct> {
@@ -204,6 +225,27 @@ export async function deleteProduct(id: string): Promise<void> {
     headers: getAuthHeaders(),
   });
   if (!res.ok) throw new Error(`Failed to delete product: ${res.status}`);
+}
+
+// Excel template and import (Admin)
+export function getProductTemplateUrl(categoryId: string): string {
+  return `${API_BASE}/api/admin/products/template/${categoryId}`;
+}
+
+export async function importProductsFromExcel(categoryId: string, file: File): Promise<{ imported: number; results: any[] }>{
+  const token = typeof window !== 'undefined' ? localStorage.getItem('tpestore_token') : null;
+  const form = new FormData();
+  form.append('categoryId', categoryId);
+  form.append('file', file);
+  const res = await fetch(`${API_BASE}/api/admin/products/import`, {
+    method: 'POST',
+    headers: {
+      ...(token && { Authorization: `Bearer ${token}` })
+    } as any,
+    body: form
+  });
+  if (!res.ok) throw new Error(`Failed to import products: ${res.status}`);
+  return await res.json();
 }
 
 // Admin Categories
@@ -290,5 +332,80 @@ export async function deleteUser(id: string): Promise<void> {
   });
   if (!res.ok) throw new Error(`Failed to delete user: ${res.status}`);
 }
+
+// User Profile API
+export async function fetchUserProfile(): Promise<AdminUser> {
+  const res = await fetch(`${API_BASE}/api/users/profile`, {
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) throw new Error(`Failed to fetch user profile: ${res.status}`);
+  return await res.json();
+}
+
+export async function updateUserProfile(userData: Partial<AdminUser>): Promise<AdminUser> {
+  const res = await fetch(`${API_BASE}/api/users/profile`, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(userData),
+  });
+  if (!res.ok) throw new Error(`Failed to update user profile: ${res.status}`);
+  return await res.json();
+}
+
+// File upload (images)
+export async function uploadImage(file: File): Promise<string> {
+  const form = new FormData();
+  form.append('image', file);
+  const res = await fetch(`${API_BASE}/api/upload`, {
+    method: 'POST',
+    body: form
+  });
+  if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
+  const data = await res.json();
+  const path: string = data.url;
+  // Return absolute URL so frontend at port 3000 can load image from backend 4000
+  return path.startsWith('http') ? path : `${API_BASE}${path}`;
+}
+
+// API Client object for easy usage in components
+export const api = {
+  // Users API
+  get: async (url: string) => {
+    const res = await fetch(`${API_BASE}${url}`, {
+      headers: getAuthHeaders(),
+    });
+    if (!res.ok) throw new Error(`API request failed: ${res.status}`);
+    return await res.json();
+  },
+  
+  post: async (url: string, data?: any) => {
+    const res = await fetch(`${API_BASE}${url}`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: data ? JSON.stringify(data) : undefined,
+    });
+    if (!res.ok) throw new Error(`API request failed: ${res.status}`);
+    return await res.json();
+  },
+  
+  put: async (url: string, data?: any) => {
+    const res = await fetch(`${API_BASE}${url}`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: data ? JSON.stringify(data) : undefined,
+    });
+    if (!res.ok) throw new Error(`API request failed: ${res.status}`);
+    return await res.json();
+  },
+  
+  delete: async (url: string) => {
+    const res = await fetch(`${API_BASE}${url}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
+    if (!res.ok) throw new Error(`API request failed: ${res.status}`);
+    return await res.json();
+  },
+};
 
 

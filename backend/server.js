@@ -4,9 +4,32 @@ import cors from 'cors';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import multer from 'multer';
+import xlsx from 'xlsx';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { PrismaClient } from '../src/generated/prisma/index.js';
+import { requireAdmin } from './middleware/auth.js';
+import {
+  getAdminProducts,
+  getAdminProductById,
+  createProduct as createAdminProduct,
+  updateProduct as updateAdminProduct,
+  deleteProduct as deleteAdminProduct
+} from './controllers/adminProductController.js';
+import {
+  getAdminCategories,
+  getAdminCategoryById,
+  createCategory as createAdminCategory,
+  updateCategory as updateAdminCategory,
+  deleteCategory as deleteAdminCategory
+} from './controllers/adminCategoryController.js';
+import {
+  getAdminUsers,
+  getAdminUserById,
+  updateUser as updateAdminUser,
+  deleteUser as deleteAdminUser,
+  getUserStats
+} from './controllers/adminUserController.js';
 
 const app = express();
 const prisma = new PrismaClient();
@@ -89,7 +112,9 @@ app.get('/api', (req, res) => {
       '/api/categories', '/api/categories/:id',
       '/api/cart', '/api/orders', '/api/orders/:id',
       '/api/products/:productId/reviews',
-      '/api/products/:productId/interact', '/api/recommendations'
+      '/api/products/:productId/interact', '/api/recommendations',
+      // Excel import/export
+      '/api/admin/products/template/:categoryId', '/api/admin/products/import'
     ] 
   });
 });
@@ -753,6 +778,95 @@ app.post('/api/upload', upload.single('image'), (req, res) => {
     res.status(500).json({ error: 'Upload failed' });
   }
 });
+
+// ================================
+// Admin Router (single backend)
+// ================================
+const adminRouter = express.Router();
+
+// Public: Excel template (no admin auth required)
+adminRouter.get('/products/template/:categoryId', async (req, res) => {
+  try {
+    const { categoryId } = req.params;
+    const category = await prisma.category.findUnique({
+      where: { id: categoryId },
+      include: { specFields: true }
+    });
+    if (!category) return res.status(404).json({ error: 'Category not found' });
+
+    const baseColumns = ['name', 'description', 'price', 'stock', 'image'];
+    const specColumns = category.specFields.map(f => `spec:${f.name}`);
+    const headers = [...baseColumns, ...specColumns];
+
+    const sampleRow = {
+      name: 'Tên sản phẩm ví dụ',
+      description: 'Mô tả',
+      price: 1000000,
+      stock: 10,
+      image: '/uploads/sample.png',
+    };
+    const specSample = Object.fromEntries(category.specFields.map(f => [
+      `spec:${f.name}`, f.unit ? `${f.name} (${f.unit})` : f.name
+    ]));
+
+    const data = [Object.assign({}, sampleRow, specSample)];
+    const ws = xlsx.utils.json_to_sheet(data, { header: headers });
+    const wb = xlsx.utils.book_new();
+    xlsx.utils.book_append_sheet(wb, ws, category.name.slice(0, 31));
+
+    const buffer = xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' });
+    res.setHeader('Content-Disposition', `attachment; filename="template-${category.name}.xlsx"`);
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.send(buffer);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Failed to generate template' });
+  }
+});
+
+// All other admin endpoints require ADMIN
+adminRouter.use(requireAdmin);
+
+// Product management
+adminRouter.get('/products', getAdminProducts);
+adminRouter.get('/products/:id', getAdminProductById);
+adminRouter.post('/products', createAdminProduct);
+adminRouter.put('/products/:id', updateAdminProduct);
+adminRouter.delete('/products/:id', deleteAdminProduct);
+
+// Excel import (admin only)
+const excelUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const ok = [
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-excel'
+    ].includes(file.mimetype) || file.originalname.endsWith('.xlsx');
+    if (!ok) return cb(new Error('Invalid file type'));
+    cb(null, true);
+  }
+});
+import { importProductsFromExcel } from './controllers/adminProductController.js';
+adminRouter.post('/products/import', excelUpload.single('file'), importProductsFromExcel);
+
+// Category management
+adminRouter.get('/categories', getAdminCategories);
+adminRouter.get('/categories/:id', getAdminCategoryById);
+adminRouter.post('/categories', createAdminCategory);
+adminRouter.put('/categories/:id', updateAdminCategory);
+adminRouter.delete('/categories/:id', deleteAdminCategory);
+
+// User management
+adminRouter.get('/users', getAdminUsers);
+adminRouter.get('/users/:id', getAdminUserById);
+adminRouter.put('/users/:id', updateAdminUser);
+adminRouter.delete('/users/:id', deleteAdminUser);
+adminRouter.get('/users/stats', getUserStats);
+
+app.use('/api/admin', adminRouter);
+
+// (Template + Import are handled inside adminRouter or controllers)
 
 // ================================
 // Start server

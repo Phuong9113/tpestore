@@ -17,26 +17,32 @@ export default function UserModal({ isOpen, onClose, user, onSave }: UserModalPr
     name: "",
     email: "",
     phone: "",
-    role: "customer",
-    status: "active",
+    address: "",
+    city: "",
+    postalCode: "",
+    avatar: "",
   })
 
   useEffect(() => {
     if (user) {
       setFormData({
-        name: user.name,
+        name: user.name || "",
         email: user.email,
-        phone: user.phone,
-        role: user.role,
-        status: user.status,
+        phone: user.phone || "",
+        address: user.address || "",
+        city: user.city || "",
+        postalCode: user.postalCode || "",
+        avatar: user.avatar || "",
       })
     } else {
       setFormData({
         name: "",
         email: "",
         phone: "",
-        role: "customer",
-        status: "active",
+        address: "",
+        city: "",
+        postalCode: "",
+        avatar: "",
       })
     }
   }, [user, isOpen])
@@ -94,35 +100,50 @@ export default function UserModal({ isOpen, onClose, user, onSave }: UserModalPr
               value={formData.phone}
               onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
               className="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">Địa chỉ</label>
+            <input
+              type="text"
+              value={formData.address}
+              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+              className="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Vai trò</label>
-              <select
-                value={formData.role}
-                onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+              <label className="block text-sm font-medium text-foreground mb-2">Thành phố</label>
+              <input
+                type="text"
+                value={formData.city}
+                onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                 className="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-              >
-                <option value="customer">Khách hàng</option>
-                <option value="staff">Nhân viên</option>
-                <option value="admin">Quản trị viên</option>
-              </select>
+              />
             </div>
             <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Trạng thái</label>
-              <select
-                value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+              <label className="block text-sm font-medium text-foreground mb-2">Mã bưu điện</label>
+              <input
+                type="text"
+                value={formData.postalCode}
+                onChange={(e) => setFormData({ ...formData, postalCode: e.target.value })}
                 className="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-              >
-                <option value="active">Hoạt động</option>
-                <option value="inactive">Không hoạt động</option>
-              </select>
+              />
             </div>
           </div>
+
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">Avatar URL</label>
+            <input
+              type="url"
+              value={formData.avatar}
+              onChange={(e) => setFormData({ ...formData, avatar: e.target.value })}
+              className="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+
 
           {/* Actions */}
           <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
