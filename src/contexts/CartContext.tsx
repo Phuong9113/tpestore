@@ -27,9 +27,17 @@ const CartContext = createContext<CartContextType | undefined>(undefined)
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([])
+  const [isClient, setIsClient] = useState(false)
+
+  // Set client flag to prevent hydration issues
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
 
   // Load cart từ backend nếu đã đăng nhập, nếu không thì từ localStorage
   useEffect(() => {
+    if (!isClient) return
+
     const token = getToken()
     if (token) {
       ;(async () => {
@@ -46,12 +54,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
       const savedCart = localStorage.getItem("tpe-cart")
       if (savedCart) setItems(JSON.parse(savedCart))
     }
-  }, [])
+  }, [isClient])
 
   // Lưu cart vào localStorage khi items thay đổi
   useEffect(() => {
-    localStorage.setItem("tpe-cart", JSON.stringify(items))
-  }, [items])
+    if (isClient) {
+      localStorage.setItem("tpe-cart", JSON.stringify(items))
+    }
+  }, [items, isClient])
 
   const addItem = async (item: Omit<CartItem, "quantity">) => {
     const exists = items.find((i) => i.id === item.id)

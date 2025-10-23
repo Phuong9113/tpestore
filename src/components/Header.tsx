@@ -12,6 +12,11 @@ export default function Header() {
   const [animate, setAnimate] = useState(false)
   const [showAccountMenu, setShowAccountMenu] = useState(false)
   const [user, setUser] = useState<AuthUser | null>(null)
+  const [isClient, setIsClient] = useState(false)
+
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
 
   useEffect(() => {
     if (totalItems > 0) {
@@ -61,7 +66,7 @@ export default function Header() {
               <ShoppingCartIcon
                 className={`w-6 h-6 text-foreground transition-transform ${animate ? "animate-bounce" : ""}`}
               />
-              {totalItems > 0 && (
+              {isClient && totalItems > 0 && (
                 <span
                   className={`absolute -top-1 -right-1 w-5 h-5 bg-accent text-accent-foreground text-xs rounded-full flex items-center justify-center font-medium transition-all ${
                     animate ? "scale-125 animate-pulse" : "scale-100"

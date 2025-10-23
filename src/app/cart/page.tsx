@@ -140,9 +140,11 @@ const handleClearCart = () => {
                 </div>
               </div>
 
-              <Button size="lg" className="w-full">
-                Thanh toán
-              </Button>
+              <Link href="/checkout">
+                <Button size="lg" className="w-full">
+                  Thanh toán
+                </Button>
+              </Link>
 
               <Link href="/products">
                 <Button variant="outline" size="lg" className="w-full bg-transparent">

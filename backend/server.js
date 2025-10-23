@@ -36,6 +36,19 @@ import {
   updateAdminOrderStatus,
   getOrderStats
 } from './controllers/adminOrderController.js';
+import {
+  getProvinces,
+  getDistricts,
+  getWards,
+  calculateShippingFee,
+  getServices,
+  createShippingOrder,
+  trackOrder,
+  cancelOrder
+} from './controllers/shippingController.js';
+import paypalRouter from './routes/paypal.js';
+import userRoutes from './routes/users.js';
+import orderRoutes from './routes/orders.js';
 
 const app = express();
 const prisma = new PrismaClient();
@@ -229,7 +242,11 @@ app.get('/api/products', async (req, res) => {
         }
       }
     });
-    res.json(products);
+    const normalized = products.map((p) => ({
+      ...p,
+      inStock: typeof p.stock === 'number' ? p.stock > 0 : false,
+    }));
+    res.json(normalized);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Internal Server Error' });
@@ -261,7 +278,8 @@ app.get('/api/products/:id', async (req, res) => {
       }
     });
     if (!product) return res.status(404).json({ error: 'Product not found' });
-    res.json(product);
+    const normalized = { ...product, inStock: typeof product.stock === 'number' ? product.stock > 0 : false };
+    res.json(normalized);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Internal Server Error' });
@@ -523,88 +541,9 @@ app.get('/api/orders/:id', async (req, res) => {
   }
 });
 
-app.post('/api/orders', async (req, res) => {
-  try {
-    if (!req.user?.id) return res.status(401).json({ error: 'Unauthorized' });
-    const { items } = req.body; // [{ productId, quantity, price }]
-    
-    if (!items || !Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({ error: 'Invalid order items' });
-    }
+// Order routes are handled by the orders router below
 
-    // Calculate total price
-    const totalPrice = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-
-    // Create order with items
-    const order = await prisma.order.create({
-      data: {
-        userId: req.user.id,
-        totalPrice,
-        status: 'PENDING',
-        orderItems: {
-          create: items.map(item => ({
-            productId: item.productId,
-            quantity: item.quantity,
-            price: item.price
-          }))
-        }
-      },
-      include: {
-        orderItems: {
-          include: {
-            product: {
-              select: { id: true, name: true, image: true, price: true }
-            }
-          }
-        }
-      }
-    });
-
-    // Clear cart after successful order
-    await prisma.cartItem.deleteMany({ where: { userId: req.user.id } });
-
-    res.status(201).json(order);
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: 'Internal Server Error' });
-  }
-});
-
-app.patch('/api/orders/:id/status', async (req, res) => {
-  try {
-    if (!req.user?.id) return res.status(401).json({ error: 'Unauthorized' });
-    const { id } = req.params;
-    const { status } = req.body;
-    
-    if (!['PENDING', 'PAID', 'SHIPPED', 'COMPLETED', 'CANCELLED'].includes(status)) {
-      return res.status(400).json({ error: 'Invalid status' });
-    }
-
-    const order = await prisma.order.findFirst({
-      where: { id, userId: req.user.id }
-    });
-    if (!order) return res.status(404).json({ error: 'Order not found' });
-
-    const updatedOrder = await prisma.order.update({
-      where: { id },
-      data: { status },
-      include: {
-        orderItems: {
-          include: {
-            product: {
-              select: { id: true, name: true, image: true, price: true }
-            }
-          }
-        }
-      }
-    });
-
-    res.json(updatedOrder);
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: 'Internal Server Error' });
-  }
-});
+// Order status updates are handled by the orders router below
 
 // ================================
 // Reviews API
@@ -875,6 +814,27 @@ adminRouter.get('/orders/stats', getOrderStats);
 adminRouter.get('/orders', getAdminOrders);
 adminRouter.get('/orders/:id', getAdminOrderById);
 adminRouter.patch('/orders/:id/status', updateAdminOrderStatus);
+
+// ================================
+// Shipping API (GHN Integration)
+// ================================
+app.get('/api/shipping/provinces', getProvinces);
+app.get('/api/shipping/districts/:provinceId', getDistricts);
+app.get('/api/shipping/wards/:districtId', getWards);
+app.get('/api/shipping/services', getServices);
+app.post('/api/shipping/calculate-fee', calculateShippingFee);
+app.post('/api/shipping/create-order', createShippingOrder);
+app.get('/api/shipping/track/:orderCode', trackOrder);
+app.post('/api/shipping/cancel/:orderCode', cancelOrder);
+
+// PayPal routes
+app.use('/api/paypal', paypalRouter);
+
+// User routes
+app.use('/api/users', userRoutes);
+
+// Order routes
+app.use('/api/orders', orderRoutes);
 
 app.use('/api/admin', adminRouter);
 

@@ -52,7 +52,20 @@ export const getOrderById = async (req, res) => {
 
 export const createOrder = async (req, res) => {
   try {
-    const { items } = req.body;
+    console.log('Create order request body:', req.body);
+    console.log('User ID:', req.user?.id);
+    
+    const { 
+      items, 
+      shippingInfo, 
+      paymentMethod = 'COD', 
+      deliverOption = 'xfast' 
+    } = req.body;
+    
+    // Check if user is authenticated
+    if (!req.user?.id) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
     
     const validation = validateRequired(req.body, ['items']);
     if (validation) return res.status(400).json(validation);
@@ -68,15 +81,35 @@ export const createOrder = async (req, res) => {
       }
     }
     
+    // Validate that all products exist
+    const productIds = items.map(item => item.productId);
+    const existingProducts = await prisma.product.findMany({
+      where: { id: { in: productIds } },
+      select: { id: true }
+    });
+    
+    if (existingProducts.length !== productIds.length) {
+      const existingIds = existingProducts.map(p => p.id);
+      const missingIds = productIds.filter(id => !existingIds.includes(id));
+      return res.status(400).json({ 
+        error: `Products not found: ${missingIds.join(', ')}` 
+      });
+    }
+    
     // Calculate total price
     const totalPrice = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const shippingFee = shippingInfo?.shippingFee || 0;
+    const finalTotal = totalPrice + shippingFee;
     
-    // Create order with items
+    console.log('Calculated totals:', { totalPrice, shippingFee, finalTotal });
+    
+    // Create order with items and shipping info
     const order = await prisma.order.create({
       data: {
         userId: req.user.id,
-        totalPrice,
+        totalPrice: finalTotal,
         status: 'PENDING',
+        paymentMethod: paymentMethod,
         orderItems: {
           create: items.map(item => ({
             productId: item.productId,
@@ -96,11 +129,14 @@ export const createOrder = async (req, res) => {
       }
     });
     
+    console.log('Order created successfully:', order.id);
+    
     // Clear cart after successful order
     await prisma.cartItem.deleteMany({ where: { userId: req.user.id } });
     
     res.status(201).json(order);
   } catch (error) {
+    console.error('Create order error:', error);
     handleError(res, error);
   }
 };

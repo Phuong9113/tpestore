@@ -10,6 +10,10 @@ interface Order {
   totalPrice: number
   status: string
   paymentStatus: string
+  paymentMethod?: string
+  transactionId?: string
+  paypalOrderId?: string
+  paidAt?: string
   createdAt: string
   user: {
     id: string
@@ -236,6 +240,9 @@ export default function OrdersPage() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Thanh toán
                 </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  Phương thức
+                </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Thao tác
                 </th>
@@ -244,13 +251,13 @@ export default function OrdersPage() {
             <tbody className="divide-y divide-border">
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center">
+                  <td colSpan={8} className="px-6 py-12 text-center">
                     <p className="text-muted-foreground">Đang tải dữ liệu...</p>
                   </td>
                 </tr>
               ) : orders.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center">
+                  <td colSpan={8} className="px-6 py-12 text-center">
                     <p className="text-muted-foreground">Không tìm thấy đơn hàng nào</p>
                   </td>
                 </tr>
@@ -291,6 +298,18 @@ export default function OrdersPage() {
                       >
                         {paymentConfig[order.paymentStatus as keyof typeof paymentConfig]?.label || order.paymentStatus}
                       </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-sm text-foreground">
+                        {order.paymentMethod === 'PAYPAL' ? 'PayPal' : 
+                         order.paymentMethod === 'COD' ? 'COD' : 
+                         order.paymentMethod || 'N/A'}
+                      </span>
+                      {order.transactionId && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          ID: {order.transactionId.slice(0, 8)}...
+                        </p>
+                      )}
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-end gap-2">
