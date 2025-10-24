@@ -225,7 +225,10 @@ class GHNService {
         ...(data.length && { length: parseInt(data.length) }),
         ...(data.width && { width: parseInt(data.width) }),
         ...(data.height && { height: parseInt(data.height) }),
-        ...(data.insuranceValue && { insurance_value: parseInt(data.insuranceValue) })
+        ...(data.insuranceValue && { insurance_value: parseInt(data.insuranceValue) }),
+        // Add required fields for GHN API
+        required_note: data.requiredNote || 'CHOTHUHANG',
+        payment_type_id: data.paymentTypeId || 1
       };
 
       console.log('GHN API payload:', JSON.stringify(payload, null, 2));

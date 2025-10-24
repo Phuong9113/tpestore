@@ -190,6 +190,11 @@ export const getServices = async (req, res) => {
 
 // Tạo đơn hàng vận chuyển
 export const createShippingOrder = async (req, res) => {
+  console.log('=== CREATE SHIPPING ORDER START ===');
+  console.log('Request body:', JSON.stringify(req.body, null, 2));
+  console.log('Request headers:', req.headers);
+  console.log('Request user:', req.user);
+  
   try {
     const {
       // Base address fields
@@ -272,9 +277,9 @@ export const createShippingOrder = async (req, res) => {
       hamlet: hamlet,
       paymentTypeId: pickOption === 'cod' ? 2 : 1,
       transport,
-      // Add ConfigFeeID and ExtraCostID for service type 1 (legacy support)
-      configFeeId: ghnConfig.defaultShipping.configFeeId,
-      extraCostId: ghnConfig.defaultShipping.extraCostId,
+      // Add ConfigFeeID and ExtraCostID only if they have valid values
+      ...(ghnConfig.defaultShipping.configFeeId && { configFeeId: ghnConfig.defaultShipping.configFeeId }),
+      ...(ghnConfig.defaultShipping.extraCostId && { extraCostId: ghnConfig.defaultShipping.extraCostId }),
       items: mappedItems
     };
     
@@ -288,13 +293,32 @@ export const createShippingOrder = async (req, res) => {
       console.error('GHN Service Error Details:', {
         message: ghnError.message,
         stack: ghnError.stack,
-        name: ghnError.name
+        name: ghnError.name,
+        response: ghnError.response?.data || ghnError.response
       });
-      throw ghnError;
+      
+      // Return specific error message instead of throwing
+      return res.status(500).json({
+        error: 'GHN API Error',
+        message: ghnError.message,
+        details: ghnError.response?.data || 'Unknown error'
+      });
     }
   } catch (error) {
     console.error('Shipping order creation error:', error);
-    handleError(res, error);
+    console.error('Error stack:', error.stack);
+    console.error('Error details:', {
+      message: error.message,
+      name: error.name,
+      code: error.code
+    });
+    
+    // Return detailed error information
+    return res.status(500).json({
+      error: 'Shipping order creation failed',
+      message: error.message,
+      details: error.stack
+    });
   }
 };
 

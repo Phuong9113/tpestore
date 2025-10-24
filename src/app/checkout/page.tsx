@@ -49,13 +49,14 @@ export default function CheckoutPage() {
 
   // Check authentication
   useEffect(() => {
-    const token = localStorage.getItem("tpestore_token");
+    const token = localStorage.getItem('tpestore_token');
     if (!token) {
-      toast.error("Vui lòng đăng nhập để tiếp tục");
-      router.push("/login");
+      toast.error('Vui lòng đăng nhập để tiếp tục');
+      router.push('/login');
       return;
     }
   }, [router]);
+
 
   // Form states
   const [shippingInfo, setShippingInfo] = useState({
@@ -283,8 +284,27 @@ export default function CheckoutPage() {
       };
 
       console.log("Creating order with data:", orderData);
-      const response = await api.post("/orders", orderData);
-      console.log("Order creation response:", response);
+      let response;
+      try {
+        response = await api.post("/orders", orderData);
+        console.log("Order creation response:", response);
+      } catch (error: any) {
+        console.error("Error creating order:", error);
+        if (error.message.includes("401") || error.message.includes("Unauthorized")) {
+          toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
+          localStorage.removeItem('tpestore_token');
+          router.push('/login');
+          return;
+        } else if (error.message.includes("Products not found")) {
+          toast.error("Một số sản phẩm không còn tồn tại. Vui lòng làm mới giỏ hàng.");
+          clearCart();
+          window.location.reload();
+          return;
+        } else {
+          toast.error("Có lỗi xảy ra khi tạo đơn hàng. Vui lòng thử lại.");
+          return;
+        }
+      }
       const orderId = response.id || response.data?.id;
       setCreatedOrderId(orderId);
 

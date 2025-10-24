@@ -8,7 +8,7 @@ import xlsx from 'xlsx';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { PrismaClient } from '../src/generated/prisma/index.js';
-import { requireAdmin } from './middleware/auth.js';
+import { requireAdmin, authenticateToken } from './middleware/auth.js';
 import {
   getAdminProducts,
   getAdminProductById,
@@ -823,7 +823,7 @@ app.get('/api/shipping/districts/:provinceId', getDistricts);
 app.get('/api/shipping/wards/:districtId', getWards);
 app.get('/api/shipping/services', getServices);
 app.post('/api/shipping/calculate-fee', calculateShippingFee);
-app.post('/api/shipping/create-order', createShippingOrder);
+app.post('/api/shipping/create-order', authenticateToken, createShippingOrder);
 app.get('/api/shipping/track/:orderCode', trackOrder);
 app.post('/api/shipping/cancel/:orderCode', cancelOrder);
 
