@@ -491,6 +491,90 @@ app.delete('/api/cart', async (req, res) => {
   }
 });
 
+// Merge cart endpoint
+app.post('/api/cart/merge', async (req, res) => {
+  try {
+    if (!req.user?.id) return res.status(401).json({ error: 'Unauthorized' });
+    
+    const { items } = req.body; // items từ localStorage
+    
+    if (!Array.isArray(items)) {
+      return res.status(400).json({ error: 'Items must be an array' });
+    }
+
+    // Lấy giỏ hàng hiện tại từ DB
+    const existingCartItems = await prisma.cartItem.findMany({
+      where: { userId: req.user.id },
+      include: { product: true }
+    });
+
+    const mergedItems = [];
+    const processedProductIds = new Set();
+
+    // Xử lý từng item từ localStorage
+    for (const localItem of items) {
+      const { id: productId, quantity } = localItem;
+      
+      // Kiểm tra sản phẩm có tồn tại không
+      const product = await prisma.product.findUnique({ where: { id: productId } });
+      if (!product) continue;
+
+      // Tìm item đã có trong DB
+      const existingItem = existingCartItems.find(item => item.productId === productId);
+      
+      if (existingItem) {
+        // Gộp số lượng: DB + localStorage
+        const newQuantity = existingItem.quantity + quantity;
+        const updatedItem = await prisma.cartItem.update({
+          where: { id: existingItem.id },
+          data: { quantity: newQuantity }
+        });
+        
+        mergedItems.push({
+          productId: updatedItem.productId,
+          name: product.name,
+          price: product.price,
+          image: product.image,
+          quantity: updatedItem.quantity
+        });
+      } else {
+        // Tạo mới item trong DB
+        const newItem = await prisma.cartItem.create({
+          data: { userId: req.user.id, productId, quantity }
+        });
+        
+        mergedItems.push({
+          productId: newItem.productId,
+          name: product.name,
+          price: product.price,
+          image: product.image,
+          quantity: newItem.quantity
+        });
+      }
+      
+      processedProductIds.add(productId);
+    }
+
+    // Thêm các item chỉ có trong DB (không có trong localStorage)
+    for (const dbItem of existingCartItems) {
+      if (!processedProductIds.has(dbItem.productId)) {
+        mergedItems.push({
+          productId: dbItem.productId,
+          name: dbItem.product.name,
+          price: dbItem.product.price,
+          image: dbItem.product.image,
+          quantity: dbItem.quantity
+        });
+      }
+    }
+
+    res.json({ items: mergedItems });
+  } catch (error) {
+    console.error('Merge cart error:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
 // ================================
 // Orders API (auth required)
 // ================================

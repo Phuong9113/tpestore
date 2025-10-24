@@ -4,7 +4,7 @@ import {
   addToCart, 
   updateCartItem, 
   removeFromCart, 
-  clearCart 
+  clearCart
 } from '../controllers/cartController.js';
 import { requireAuth } from '../middleware/auth.js';
 

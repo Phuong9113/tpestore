@@ -15,11 +15,19 @@ export function getToken(): string | null {
 export function setToken(token: string) {
   if (typeof window === 'undefined') return;
   localStorage.setItem('tpestore_token', token);
+  // Xóa sessionStorage cart khi đăng nhập (chuyển sang dùng database)
+  sessionStorage.removeItem('tpe-cart');
 }
 
 export function clearToken() {
   if (typeof window === 'undefined') return;
   localStorage.removeItem('tpestore_token');
+  // Xóa sessionStorage cart khi đăng xuất
+  sessionStorage.removeItem('tpe-cart');
+  // Dispatch custom event để CartContext biết user đã đăng xuất
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('userLoggedOut'));
+  }
 }
 
 export async function register(name: string, email: string, password: string) {

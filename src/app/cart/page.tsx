@@ -37,6 +37,13 @@ export default function CartPage() {
 
 const handleUpdateQuantity = (id: string, quantity: number, name: string) => {
   console.log("%c[CartPage] handleUpdateQuantity called", "color: blue; font-weight: bold;", { id, quantity, name })
+  
+  // Tìm item hiện tại để log thêm thông tin
+  const currentItem = items.find(item => item.id === id)
+  if (currentItem) {
+    console.log(`[CartPage] Current item: id=${id}, currentQuantity=${currentItem.quantity}, newQuantity=${quantity}`)
+  }
+  
   updateQuantity(id, quantity)
 }
 
@@ -108,7 +115,8 @@ const handleClearCart = () => {
                     <span className="w-8 text-center font-medium text-foreground">{item.quantity}</span>
                     <button
                       onClick={() => handleUpdateQuantity(item.id, item.quantity + 1, item.name)}
-                      className="w-8 h-8 flex items-center justify-center hover:bg-secondary-foreground/10 rounded-lg transition-colors"
+                      disabled={item.quantity >= 100}
+                      className="w-8 h-8 flex items-center justify-center hover:bg-secondary-foreground/10 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <PlusIcon className="w-4 h-4 text-foreground" />
                     </button>
