@@ -349,7 +349,13 @@ export default function CheckoutPage() {
       // For PayPal, we'll show the PayPal button instead of redirecting
     } catch (error) {
       console.error("Error creating order:", error);
-      if (error.message.includes("Products not found")) {
+      if (
+        typeof error === "object" &&
+        error !== null &&
+        "message" in error &&
+        typeof (error as { message?: unknown }).message === "string" &&
+        (error as { message: string }).message.includes("Products not found")
+      ) {
         toast.error("Một số sản phẩm trong giỏ hàng không còn tồn tại. Vui lòng làm mới trang và thử lại.");
         // Clear cart and reload to get fresh data
         clearCart();
