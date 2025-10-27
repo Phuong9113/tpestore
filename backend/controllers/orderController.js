@@ -111,6 +111,14 @@ export const createOrder = async (req, res) => {
         totalPrice: finalTotal,
         status: 'PENDING',
         paymentMethod: paymentMethod,
+        // Store shipping information
+        shippingName: shippingInfo?.name,
+        shippingPhone: shippingInfo?.phone,
+        shippingAddress: shippingInfo?.address,
+        shippingProvince: shippingInfo?.provinceName || shippingInfo?.province,
+        shippingDistrict: shippingInfo?.districtName || shippingInfo?.district,
+        shippingWard: shippingInfo?.wardName || shippingInfo?.ward,
+        shippingFee: shippingFee,
         orderItems: {
           create: items.map(item => ({
             productId: item.productId,

@@ -14,7 +14,7 @@ import {
 } from "@heroicons/react/24/outline"
 import Link from "next/link"
 import { me, updateMe, type AuthUser } from "@/lib/auth"
-import { fetchUserProfile, updateUserProfile, cancelUserOrder } from "@/lib/api"
+import { fetchUserProfile, updateUserProfile, cancelUserOrder, api } from "@/lib/api"
 import Image from "next/image"
 import ProtectedRoute from "@/components/ProtectedRoute"
 
@@ -67,12 +67,14 @@ interface OrderDetail {
   items: OrderItem[]
   subtotal: number
   shipping: number
-  tax: number
   total: number
   shippingAddress: {
     name: string
     phone: string
     address: string
+    province?: string
+    district?: string
+    ward?: string
   }
   paymentMethod: string
   ghnOrderCode?: string
@@ -173,19 +175,12 @@ function ProfilePageContent() {
 
   const handleViewOrderDetails = async (orderId: string) => {
     try {
-      // Find the order from the orders list
-      const matchingOrder = orders.find(o => o.id === orderId)
+      // Fetch order details from API
+      const orderData = await api.get(`/orders/${orderId}`)
       
-      // For now, we'll use mock data since order detail API might not be implemented
-      // TODO: Implement order detail API endpoint
-      const orderData = {
-        id: orderId,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        totalPrice: matchingOrder?.total || 0,
-        status: matchingOrder?.status.replace('Đang ', '').replace(' ', '_').toUpperCase() || 'PENDING',
-        orderItems: []
-      }
+      // Calculate subtotal (total price - shipping fee)
+      const shippingFee = orderData.shippingFee || 0
+      const subtotal = orderData.totalPrice - shippingFee
       
       const orderDetail: OrderDetail = {
         id: orderData.id,
@@ -201,17 +196,20 @@ function ProfilePageContent() {
           price: item.product.price,
           quantity: item.quantity,
         })) || [],
-        subtotal: orderData.totalPrice,
-        shipping: 0, // This would need to be added to the order model
-        tax: Math.round(orderData.totalPrice * 0.1), // 10% VAT
+        subtotal: subtotal,
+        shipping: shippingFee,
         total: orderData.totalPrice,
         shippingAddress: {
-          name: profile.name || "Chưa có tên",
-          phone: profile.phone || "Chưa có SĐT",
-          address: profile.address || "Chưa có địa chỉ",
+          name: orderData.shippingName || profile.name || "Chưa có tên",
+          phone: orderData.shippingPhone || profile.phone || "Chưa có SĐT",
+          address: orderData.shippingAddress || profile.address || "Chưa có địa chỉ",
+          province: orderData.shippingProvince,
+          district: orderData.shippingDistrict,
+          ward: orderData.shippingWard,
         },
-        paymentMethod: "Thanh toán khi nhận hàng", // Default payment method
-        ghnOrderCode: matchingOrder?.ghnOrderCode,
+        paymentMethod: orderData.paymentMethod === 'COD' ? 'Thanh toán khi nhận hàng' : 
+                       orderData.paymentMethod === 'PAYPAL' ? 'PayPal' : 'Thanh toán khi nhận hàng',
+        ghnOrderCode: orderData.ghnOrderCode,
         timeline: [
           { 
             status: orderData.status === 'PENDING' ? 'Đang xử lý' : 
@@ -408,6 +406,13 @@ function ProfilePageContent() {
                   <p className="font-medium text-foreground">{selectedOrder.shippingAddress.name}</p>
                   <p className="text-sm text-muted-foreground mt-1">{selectedOrder.shippingAddress.phone}</p>
                   <p className="text-sm text-foreground mt-2">{selectedOrder.shippingAddress.address}</p>
+                  <p className="text-sm text-foreground mt-1">
+                    {[
+                      selectedOrder.shippingAddress.ward,
+                      selectedOrder.shippingAddress.district,
+                      selectedOrder.shippingAddress.province
+                    ].filter(Boolean).join(", ")}
+                  </p>
                 </div>
               </div>
 
@@ -435,10 +440,6 @@ function ProfilePageContent() {
                     <span>
                       {selectedOrder.shipping === 0 ? "Miễn phí" : `${selectedOrder.shipping.toLocaleString("vi-VN")}₫`}
                     </span>
-                  </div>
-                  <div className="flex justify-between text-foreground">
-                    <span>Thuế VAT (10%)</span>
-                    <span>{selectedOrder.tax.toLocaleString("vi-VN")}₫</span>
                   </div>
                   <div className="border-t border-border pt-3 flex justify-between text-lg font-bold text-foreground">
                     <span>Tổng cộng</span>

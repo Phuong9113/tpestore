@@ -268,6 +268,11 @@ export default function CheckoutPage() {
     try {
       setLoading(true);
 
+      // Find names from IDs
+      const provinceName = provinces.find(p => p.ProvinceID.toString() === shippingInfo.province)?.ProvinceName || shippingInfo.province;
+      const districtName = districts.find(d => d.DistrictID.toString() === shippingInfo.district)?.DistrictName || shippingInfo.district;
+      const wardName = wards.find(w => w.WardCode === shippingInfo.ward)?.WardName || shippingInfo.ward;
+
       // Create order
       const orderData = {
         items: items.map((item) => ({
@@ -277,6 +282,9 @@ export default function CheckoutPage() {
         })),
         shippingInfo: {
           ...shippingInfo,
+          provinceName: provinceName,
+          districtName: districtName,
+          wardName: wardName,
           shippingFee: shippingFee?.total || 0,
         },
         paymentMethod,
