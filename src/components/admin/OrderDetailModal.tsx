@@ -1,6 +1,9 @@
 "use client"
 
 import { XMarkIcon, TruckIcon } from "@heroicons/react/24/outline"
+import { useState } from "react"
+import GHNOrderDetail from "../GHNOrderDetail"
+import { cancelOrder } from "@/lib/api"
 
 interface Order {
   id: string
@@ -8,6 +11,7 @@ interface Order {
   status: string
   paymentStatus: string
   createdAt: string
+  ghnOrderCode?: string
   user: {
     id: string
     name: string
@@ -31,10 +35,29 @@ interface OrderDetailModalProps {
   isOpen: boolean
   onClose: () => void
   order: Order | null
+  onOrderUpdate?: () => void
 }
 
-export default function OrderDetailModal({ isOpen, onClose, order }: OrderDetailModalProps) {
+export default function OrderDetailModal({ isOpen, onClose, order, onOrderUpdate }: OrderDetailModalProps) {
+  const [showGHNDetail, setShowGHNDetail] = useState(false)
+  
   if (!isOpen || !order) return null
+
+  const handleCancelOrder = async () => {
+    if (!confirm('Bạn có chắc chắn muốn hủy đơn hàng này?')) {
+      return
+    }
+    
+    try {
+      await cancelOrder(order.id)
+      alert('Đơn hàng đã được hủy thành công!')
+      onOrderUpdate?.()
+      onClose()
+    } catch (error: any) {
+      console.error('Error canceling order:', error)
+      alert(`Lỗi khi hủy đơn hàng: ${error.message}`)
+    }
+  }
 
   const statusConfig = {
     PENDING: { label: "Chờ xử lý", color: "bg-yellow-500/10 text-yellow-500" },
@@ -60,8 +83,20 @@ export default function OrderDetailModal({ isOpen, onClose, order }: OrderDetail
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-border sticky top-0 bg-card">
           <div>
-            <h2 className="text-xl font-bold text-foreground">Chi tiết đơn hàng {order.id}</h2>
+            <h2 className="text-xl font-bold text-foreground">
+              Chi tiết đơn hàng {order.ghnOrderCode || order.id}
+            </h2>
             <p className="text-sm text-muted-foreground mt-1">{formatDate(order.createdAt)}</p>
+            {order.ghnOrderCode && (
+              <div className="mt-2">
+                <span className="text-sm font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                  Mã GHN: {order.ghnOrderCode}
+                </span>
+                <span className="text-xs text-muted-foreground ml-2">
+                  ID: {order.id}
+                </span>
+              </div>
+            )}
           </div>
           <button
             onClick={onClose}
@@ -142,12 +177,39 @@ export default function OrderDetailModal({ isOpen, onClose, order }: OrderDetail
             >
               Đóng
             </button>
+            {(order.status === 'PENDING' || order.status === 'PROCESSING') && (
+              <button
+                onClick={handleCancelOrder}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
+              >
+                <XMarkIcon className="w-4 h-4" />
+                Hủy đơn hàng
+              </button>
+            )}
+            {order.ghnOrderCode && (
+              <button
+                onClick={() => setShowGHNDetail(true)}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+              >
+                <TruckIcon className="w-4 h-4" />
+                Xem chi tiết GHN
+              </button>
+            )}
             <button className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors">
               In đơn hàng
             </button>
           </div>
         </div>
       </div>
+      
+      {/* GHN Order Detail Modal */}
+      {order.ghnOrderCode && (
+        <GHNOrderDetail
+          orderCode={order.ghnOrderCode}
+          isOpen={showGHNDetail}
+          onClose={() => setShowGHNDetail(false)}
+        />
+      )}
     </div>
   )
 }

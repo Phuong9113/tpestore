@@ -350,6 +350,25 @@ export async function updateUserProfile(userData: Partial<AdminUser>): Promise<A
   return await res.json();
 }
 
+// Order cancellation APIs
+export async function cancelOrder(orderId: string): Promise<{ success: boolean; message: string; order: any; ghnResult?: any }> {
+  const res = await fetch(`${API_BASE}/admin/orders/${orderId}/cancel`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) throw new Error(`Failed to cancel order: ${res.status}`);
+  return await res.json();
+}
+
+export async function cancelUserOrder(orderId: string): Promise<{ success: boolean; message: string; order: any; ghnResult?: any }> {
+  const res = await fetch(`${API_BASE}/users/orders/${orderId}/cancel`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) throw new Error(`Failed to cancel order: ${res.status}`);
+  return await res.json();
+}
+
 // File upload (images)
 export async function uploadImage(file: File): Promise<string> {
   const form = new FormData();
@@ -362,7 +381,7 @@ export async function uploadImage(file: File): Promise<string> {
   const data = await res.json();
   const path: string = data.url;
   // Return absolute URL so frontend at port 3000 can load image from backend 4000
-  return path.startsWith('http') ? path : `${API_BASE}${path}`;
+  return path.startsWith('http') ? path : `http://localhost:4000${path}`;
 }
 
 // API Client object for easy usage in components
@@ -389,6 +408,16 @@ export const api = {
   put: async (url: string, data?: any) => {
     const res = await fetch(`${API_BASE}${url}`, {
       method: 'PUT',
+      headers: getAuthHeaders(),
+      body: data ? JSON.stringify(data) : undefined,
+    });
+    if (!res.ok) throw new Error(`API request failed: ${res.status}`);
+    return await res.json();
+  },
+  
+  patch: async (url: string, data?: any) => {
+    const res = await fetch(`${API_BASE}${url}`, {
+      method: 'PATCH',
       headers: getAuthHeaders(),
       body: data ? JSON.stringify(data) : undefined,
     });

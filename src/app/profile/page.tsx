@@ -14,7 +14,7 @@ import {
 } from "@heroicons/react/24/outline"
 import Link from "next/link"
 import { me, updateMe, type AuthUser } from "@/lib/auth"
-import { fetchUserProfile, updateUserProfile } from "@/lib/api"
+import { fetchUserProfile, updateUserProfile, cancelUserOrder } from "@/lib/api"
 import Image from "next/image"
 import ProtectedRoute from "@/components/ProtectedRoute"
 
@@ -32,6 +32,7 @@ interface Order {
   total: number
   status: "Đang xử lý" | "Đang giao" | "Đã giao" | "Đã hủy" | "Đã thanh toán"
   items: number
+  ghnOrderCode?: string
 }
 
 interface Address {
@@ -74,6 +75,7 @@ interface OrderDetail {
     address: string
   }
   paymentMethod: string
+  ghnOrderCode?: string
   timeline: {
     status: string
     date: string
@@ -151,7 +153,8 @@ function ProfilePageContent() {
                   order.status === 'PAID' ? 'Đã thanh toán' :
                   order.status === 'SHIPPED' ? 'Đang giao' :
                   order.status === 'COMPLETED' ? 'Đã giao' : 'Đã hủy',
-          items: order.orderItems?.length || 0
+          items: order.orderItems?.length || 0,
+          ghnOrderCode: order.ghnOrderCode
         })) || []
         
         setOrders(userOrders)
@@ -170,14 +173,17 @@ function ProfilePageContent() {
 
   const handleViewOrderDetails = async (orderId: string) => {
     try {
+      // Find the order from the orders list
+      const matchingOrder = orders.find(o => o.id === orderId)
+      
       // For now, we'll use mock data since order detail API might not be implemented
       // TODO: Implement order detail API endpoint
       const orderData = {
         id: orderId,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        totalPrice: 0,
-        status: 'PENDING',
+        totalPrice: matchingOrder?.total || 0,
+        status: matchingOrder?.status.replace('Đang ', '').replace(' ', '_').toUpperCase() || 'PENDING',
         orderItems: []
       }
       
@@ -205,6 +211,7 @@ function ProfilePageContent() {
           address: profile.address || "Chưa có địa chỉ",
         },
         paymentMethod: "Thanh toán khi nhận hàng", // Default payment method
+        ghnOrderCode: matchingOrder?.ghnOrderCode,
         timeline: [
           { 
             status: orderData.status === 'PENDING' ? 'Đang xử lý' : 
@@ -267,6 +274,34 @@ function ProfilePageContent() {
     setIsEditing(false)
   }
 
+  const handleCancelOrder = async (orderId: string) => {
+    if (!confirm('Bạn có chắc chắn muốn hủy đơn hàng này?')) {
+      return
+    }
+    
+    try {
+      await cancelUserOrder(orderId)
+      alert('Đơn hàng đã được hủy thành công!')
+      // Refresh orders
+      const userData = await fetchUserProfile()
+      const userOrders: Order[] = userData.orders?.map((order: any) => ({
+        id: order.id,
+        date: new Date(order.createdAt).toISOString().split('T')[0],
+        total: order.totalPrice,
+        status: order.status === 'PENDING' ? 'Đang xử lý' : 
+                order.status === 'PAID' ? 'Đã thanh toán' :
+                order.status === 'SHIPPED' ? 'Đang giao' :
+                order.status === 'COMPLETED' ? 'Đã giao' : 'Đã hủy',
+        items: order.orderItems?.length || 0,
+        ghnOrderCode: order.ghnOrderCode
+      })) || []
+      setOrders(userOrders)
+    } catch (error: any) {
+      console.error('Error canceling order:', error)
+      alert(`Lỗi khi hủy đơn hàng: ${error.message}`)
+    }
+  }
+
   const getStatusColor = (status: Order["status"]) => {
     switch (status) {
       case "Đã giao":
@@ -292,7 +327,7 @@ function ProfilePageContent() {
             {/* Modal Header */}
             <div className="sticky top-0 bg-card border-b border-border p-6 flex items-center justify-between">
               <div>
-                <h2 className="text-2xl font-bold text-foreground">Chi tiết đơn hàng #{selectedOrder.id}</h2>
+                <h2 className="text-2xl font-bold text-foreground">Chi tiết đơn hàng #{selectedOrder.ghnOrderCode || selectedOrder.id}</h2>
                 <p className="text-sm text-muted-foreground mt-1">Đặt ngày {selectedOrder.date}</p>
               </div>
               <button
@@ -410,6 +445,27 @@ function ProfilePageContent() {
                     <span className="text-primary">{selectedOrder.total.toLocaleString("vi-VN")}₫</span>
                   </div>
                 </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-end gap-3 pt-4 border-t border-border">
+                <button
+                  onClick={() => setSelectedOrder(null)}
+                  className="px-4 py-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
+                >
+                  Đóng
+                </button>
+                {selectedOrder.status === 'Đang xử lý' && (
+                  <button
+                    onClick={() => {
+                      handleCancelOrder(selectedOrder.id)
+                      setSelectedOrder(null)
+                    }}
+                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                  >
+                    Hủy đơn hàng
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -614,7 +670,9 @@ function ProfilePageContent() {
                     >
                       <div className="flex items-center justify-between mb-3">
                         <div>
-                          <p className="font-semibold text-foreground">Đơn hàng #{order.id}</p>
+                          <p className="font-semibold text-foreground">
+                            Đơn hàng #{order.ghnOrderCode || order.id}
+                          </p>
                           <p className="text-sm text-muted-foreground">{order.date}</p>
                         </div>
                         <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
@@ -626,12 +684,22 @@ function ProfilePageContent() {
                         <div className="text-sm text-muted-foreground">{order.items} sản phẩm</div>
                         <div className="text-right">
                           <p className="text-lg font-bold text-foreground">{order.total.toLocaleString("vi-VN")}₫</p>
-                          <button
-                            onClick={() => handleViewOrderDetails(order.id)}
-                            className="text-sm text-primary hover:underline"
-                          >
-                            Xem chi tiết
-                          </button>
+                          <div className="flex gap-2 mt-2">
+                            <button
+                              onClick={() => handleViewOrderDetails(order.id)}
+                              className="text-sm text-primary hover:underline"
+                            >
+                              Xem chi tiết
+                            </button>
+                            {(order.status === 'Đang xử lý') && (
+                              <button
+                                onClick={() => handleCancelOrder(order.id)}
+                                className="text-sm text-red-500 hover:underline"
+                              >
+                                Hủy đơn hàng
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>

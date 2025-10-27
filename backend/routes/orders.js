@@ -13,8 +13,8 @@ const router = express.Router();
 router.use(requireAuth);
 
 router.get('/', getOrders);
-router.get('/:id', getOrderById);
 router.post('/', createOrder);
 router.patch('/:id/status', updateOrderStatus);
+router.get('/:id', getOrderById);
 
 export default router;

@@ -96,6 +96,7 @@ model Order {
   paidAt        DateTime?
   transactionId String?
   paymentMethod String?
+  ghnOrderCode  String?
   user          User          @relation("UserOrders", fields: [userId], references: [id], onDelete: Cascade)
   orderItems    OrderItem[]   @relation("OrderOrderItems")
 }

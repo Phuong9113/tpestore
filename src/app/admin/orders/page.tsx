@@ -1,9 +1,9 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { MagnifyingGlassIcon, EyeIcon } from "@heroicons/react/24/outline"
+import { MagnifyingGlassIcon, EyeIcon, XMarkIcon } from "@heroicons/react/24/outline"
 import OrderDetailModal from "@/components/admin/OrderDetailModal"
-import { api } from "@/lib/api"
+import { api, cancelOrder } from "@/lib/api"
 
 interface Order {
   id: string
@@ -15,6 +15,7 @@ interface Order {
   paypalOrderId?: string
   paidAt?: string
   createdAt: string
+  ghnOrderCode?: string
   user: {
     id: string
     name: string
@@ -109,6 +110,23 @@ export default function OrdersPage() {
       fetchStats()
     } catch (error) {
       console.error('Error updating order status:', error)
+    }
+  }
+
+  const handleCancelOrder = async (orderId: string) => {
+    if (!confirm('Bạn có chắc chắn muốn hủy đơn hàng này?')) {
+      return
+    }
+    
+    try {
+      await cancelOrder(orderId)
+      // Refresh orders after cancellation
+      fetchOrders()
+      fetchStats()
+      alert('Đơn hàng đã được hủy thành công!')
+    } catch (error: any) {
+      console.error('Error canceling order:', error)
+      alert(`Lỗi khi hủy đơn hàng: ${error.message}`)
     }
   }
 
@@ -265,7 +283,16 @@ export default function OrdersPage() {
                 orders.map((order) => (
                   <tr key={order.id} className="hover:bg-muted/30 transition-colors">
                     <td className="px-6 py-4">
-                      <span className="text-sm font-medium text-foreground">{order.id}</span>
+                      <div>
+                        <span className="text-sm font-medium text-foreground">
+                          {order.ghnOrderCode || order.id}
+                        </span>
+                        {order.ghnOrderCode && (
+                          <div className="text-xs text-muted-foreground mt-1">
+                            ID: {order.id}
+                          </div>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4">
                       <div>
@@ -319,6 +346,15 @@ export default function OrdersPage() {
                         >
                           <EyeIcon className="w-4 h-4" />
                         </button>
+                        {(order.status === 'PENDING' || order.status === 'PROCESSING') && (
+                          <button
+                            onClick={() => handleCancelOrder(order.id)}
+                            className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Hủy đơn hàng"
+                          >
+                            <XMarkIcon className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -330,7 +366,15 @@ export default function OrdersPage() {
       </div>
 
       {/* Order Detail Modal */}
-      <OrderDetailModal isOpen={isDetailModalOpen} onClose={() => setIsDetailModalOpen(false)} order={selectedOrder} />
+      <OrderDetailModal 
+        isOpen={isDetailModalOpen} 
+        onClose={() => setIsDetailModalOpen(false)} 
+        order={selectedOrder}
+        onOrderUpdate={() => {
+          fetchOrders()
+          fetchStats()
+        }}
+      />
     </div>
   )
 }

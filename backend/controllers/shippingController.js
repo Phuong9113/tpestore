@@ -1,6 +1,7 @@
 import ghnService from '../services/ghnService.js';
 import { handleError, validateRequired } from '../utils/helpers.js';
 import ghnConfig from '../config/ghn.js';
+import prisma from '../utils/database.js';
 
 // Lấy danh sách tỉnh/thành phố
 export const getProvinces = async (req, res) => {
@@ -288,6 +289,21 @@ export const createShippingOrder = async (req, res) => {
     try {
       const result = await ghnService.createShippingOrder(orderData);
       console.log('Shipping order created successfully:', JSON.stringify(result, null, 2));
+      
+      // Update order with GHN order code if orderId is provided
+      if (orderId && result.data && result.data.order_code) {
+        try {
+          await prisma.order.update({
+            where: { id: orderId },
+            data: { ghnOrderCode: result.data.order_code }
+          });
+          console.log(`Updated order ${orderId} with GHN order code: ${result.data.order_code}`);
+        } catch (updateError) {
+          console.error('Error updating order with GHN code:', updateError);
+          // Don't fail the request if order update fails
+        }
+      }
+      
       res.json(result);
     } catch (ghnError) {
       console.error('GHN Service Error Details:', {

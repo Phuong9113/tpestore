@@ -23,8 +23,8 @@ class GHNService {
   constructor() {
     // Cấu hình GHN API
     this.baseURL = process.env.GHN_BASE_URL || 'https://dev-online-gateway.ghn.vn';
-    this.token = process.env.GHN_TOKEN || '2bf42843-af1e-11f0-b040-4e257d8388b4';
-    this.shopId = process.env.GHN_SHOP_ID || '197687';
+    this.token = process.env.GHN_TOKEN || '637170d5-942b-11ea-9821-0281a26fb5d4';
+    this.shopId = process.env.GHN_SHOP_ID || '885';
     this.timeout = 10000; // 10 seconds timeout
     this.fallbackFee = 50000; // 50.000 VND fallback fee
   }
@@ -315,6 +315,30 @@ class GHNService {
     }
   }
 
+  // Lấy chi tiết đơn hàng GHN
+  async getOrderDetail(orderCode) {
+    try {
+      const payload = {
+        order_code: orderCode
+      };
+
+      console.log('GHN API payload for order detail:', JSON.stringify(payload, null, 2));
+      console.log('GHN API headers:', this.getHeaders());
+
+      const result = await httpRequest(`${this.baseURL}/shiip/public-api/v2/shipping-order/detail`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify(payload)
+      }, this.timeout);
+
+      console.log('GHN API response for order detail:', JSON.stringify(result, null, 2));
+      return result;
+    } catch (error) {
+      console.error('Error getting order detail:', error.message);
+      throw new Error('Không thể lấy chi tiết đơn hàng GHN');
+    }
+  }
+
   // Theo dõi đơn hàng
   async trackOrder(orderCode) {
     try {
@@ -331,21 +355,70 @@ class GHNService {
   }
 
   // Hủy đơn hàng
-  async cancelOrder(orderCode, reason = 'Khách hàng yêu cầu hủy') {
+  async cancelOrder(orderCode) {
     try {
       const payload = {
-        order_codes: [orderCode],
-        reason: reason
+        order_codes: [orderCode]
       };
 
-      return await httpRequest(`${this.baseURL}/shiip/public-api/v2/shipping-order/cancel`, {
+      console.log('GHN API payload for cancel order:', JSON.stringify(payload, null, 2));
+      console.log('GHN API headers:', this.getHeaders());
+
+      const result = await httpRequest(`${this.baseURL}/shiip/public-api/v2/switch-status/cancel`, {
         method: 'POST',
         headers: this.getHeaders(),
         body: JSON.stringify(payload)
       }, this.timeout);
+
+      console.log('GHN API response for cancel order:', JSON.stringify(result, null, 2));
+      
+      // Kiểm tra response từ GHN
+      if (result && result.data && Array.isArray(result.data)) {
+        const orderResult = result.data.find(item => item.order_code === orderCode);
+        if (orderResult) {
+          if (orderResult.result === true) {
+            console.log(`✅ GHN order ${orderCode} cancelled successfully`);
+            return {
+              success: true,
+              message: orderResult.message || 'Đơn hàng đã được hủy thành công trên GHN',
+              orderCode: orderResult.order_code,
+              result: orderResult.result
+            };
+          } else {
+            console.log(`❌ GHN order ${orderCode} cancellation failed: ${orderResult.message}`);
+            return {
+              success: false,
+              message: orderResult.message || 'Không thể hủy đơn hàng trên GHN',
+              orderCode: orderResult.order_code,
+              result: orderResult.result
+            };
+          }
+        }
+      }
+      
+      // Fallback nếu không tìm thấy order trong response
+      return {
+        success: true,
+        message: 'Đơn hàng đã được hủy thành công trên GHN',
+        orderCode: orderCode,
+        result: true
+      };
+      
     } catch (error) {
-      console.error('Error canceling order:', error.message);
-      throw new Error('Không thể hủy đơn hàng');
+      console.error('Error canceling GHN order:', error.message);
+      
+      // Phân tích lỗi từ GHN API
+      if (error.message.includes('400')) {
+        throw new Error('Lỗi dữ liệu gửi lên GHN: ' + error.message);
+      } else if (error.message.includes('401')) {
+        throw new Error('Lỗi xác thực GHN: Token hoặc ShopId không đúng');
+      } else if (error.message.includes('403')) {
+        throw new Error('Không có quyền hủy đơn hàng trên GHN');
+      } else if (error.message.includes('404')) {
+        throw new Error('Đơn hàng không tồn tại trên GHN');
+      } else {
+        throw new Error('Lỗi kết nối GHN API: ' + error.message);
+      }
     }
   }
 

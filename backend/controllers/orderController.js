@@ -1,5 +1,6 @@
 import prisma from '../utils/database.js';
 import { handleError, validateRequired } from '../utils/helpers.js';
+import ghnService from '../services/ghnService.js';
 
 export const getOrders = async (req, res) => {
   try {
@@ -130,6 +131,9 @@ export const createOrder = async (req, res) => {
     });
     
     console.log('Order created successfully:', order.id);
+    
+    // Note: GHN shipping order is now created by the frontend for COD payments
+    // to avoid duplicate order creation on GHN's platform
     
     // Clear cart after successful order
     await prisma.cartItem.deleteMany({ where: { userId: req.user.id } });

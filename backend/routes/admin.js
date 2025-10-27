@@ -27,7 +27,9 @@ import {
   getAdminOrders, 
   getAdminOrderById, 
   updateAdminOrderStatus, 
-  getOrderStats 
+  getOrderStats,
+  getGHNOrderDetail,
+  cancelOrder
 } from '../controllers/adminOrderController.js';
 import { requireAdmin } from '../middleware/auth.js';
 
@@ -67,6 +69,8 @@ router.get('/users/stats', getUserStats);
 router.get('/orders', getAdminOrders);
 router.get('/orders/:id', getAdminOrderById);
 router.patch('/orders/:id/status', updateAdminOrderStatus);
+router.post('/orders/:id/cancel', cancelOrder);
 router.get('/orders/stats', getOrderStats);
+router.get('/orders/ghn/:orderCode', getGHNOrderDetail);
 
 export default router;

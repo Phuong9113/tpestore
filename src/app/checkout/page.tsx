@@ -313,6 +313,7 @@ export default function CheckoutPage() {
         try {
           console.log("Creating shipping order for COD...");
           const shippingResponse = await api.post("/shipping/create-order", {
+            orderId: orderId, // Link shipping order to database order
             toName: shippingInfo.name,
             toPhone: shippingInfo.phone,
             toAddress: shippingInfo.address,
