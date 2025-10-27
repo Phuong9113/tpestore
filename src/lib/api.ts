@@ -369,6 +369,78 @@ export async function cancelUserOrder(orderId: string): Promise<{ success: boole
   return await res.json();
 }
 
+// Address management APIs
+export interface Address {
+  id: string
+  userId: string
+  name: string
+  phone: string
+  address: string
+  province?: string
+  district?: string
+  ward?: string
+  provinceName?: string
+  districtName?: string
+  wardName?: string
+  hamlet?: string
+  isDefault: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export async function fetchAddresses(): Promise<Address[]> {
+  const res = await fetch(`${API_BASE}/users/addresses`, {
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) throw new Error(`Failed to fetch addresses: ${res.status}`);
+  return await res.json();
+}
+
+export async function fetchAddressById(id: string): Promise<Address> {
+  const res = await fetch(`${API_BASE}/users/addresses/${id}`, {
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) throw new Error(`Failed to fetch address: ${res.status}`);
+  return await res.json();
+}
+
+export async function createAddress(addressData: Partial<Address>): Promise<Address> {
+  const res = await fetch(`${API_BASE}/users/addresses`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(addressData),
+  });
+  if (!res.ok) throw new Error(`Failed to create address: ${res.status}`);
+  return await res.json();
+}
+
+export async function updateAddress(id: string, addressData: Partial<Address>): Promise<Address> {
+  const res = await fetch(`${API_BASE}/users/addresses/${id}`, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(addressData),
+  });
+  if (!res.ok) throw new Error(`Failed to update address: ${res.status}`);
+  return await res.json();
+}
+
+export async function deleteAddress(id: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/users/addresses/${id}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) throw new Error(`Failed to delete address: ${res.status}`);
+}
+
+export async function setDefaultAddress(id: string): Promise<Address> {
+  const res = await fetch(`${API_BASE}/users/addresses/${id}/default`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) throw new Error(`Failed to set default address: ${res.status}`);
+  return await res.json();
+}
+
 // File upload (images)
 export async function uploadImage(file: File): Promise<string> {
   const form = new FormData();
@@ -401,7 +473,11 @@ export const api = {
       headers: getAuthHeaders(),
       body: data ? JSON.stringify(data) : undefined,
     });
-    if (!res.ok) throw new Error(`API request failed: ${res.status}`);
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      console.error(`API request failed: ${res.status}`, errorData);
+      throw new Error(`API request failed: ${res.status} - ${JSON.stringify(errorData)}`);
+    }
     return await res.json();
   },
   

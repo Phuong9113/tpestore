@@ -24,6 +24,26 @@ model User {
   orders       Order[]              @relation("UserOrders")
   interactions ProductInteraction[]
   reviews      Review[]             @relation("UserReviews")
+  addresses    Address[]            @relation("UserAddresses")
+}
+
+model Address {
+  id             String   @id @default(cuid())
+  userId         String
+  name           String
+  phone          String
+  address        String
+  province       String?
+  district       String?
+  ward           String?
+  provinceName   String?
+  districtName   String?
+  wardName       String?
+  hamlet         String?
+  isDefault      Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  user           User     @relation("UserAddresses", fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Category {

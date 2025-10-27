@@ -13,8 +13,29 @@ import {
   CogIcon,
 } from "@heroicons/react/24/outline"
 import Link from "next/link"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { me, updateMe, type AuthUser } from "@/lib/auth"
-import { fetchUserProfile, updateUserProfile, cancelUserOrder, api } from "@/lib/api"
+import { 
+  fetchUserProfile, 
+  updateUserProfile, 
+  cancelUserOrder, 
+  api,
+  fetchAddresses,
+  createAddress,
+  updateAddress,
+  deleteAddress,
+  setDefaultAddress,
+  type Address as AddressType
+} from "@/lib/api"
+import { toast } from "sonner"
 import Image from "next/image"
 import ProtectedRoute from "@/components/ProtectedRoute"
 
@@ -35,14 +56,7 @@ interface Order {
   ghnOrderCode?: string
 }
 
-interface Address {
-  id: string
-  name: string
-  phone: string
-  address: string
-  city: string
-  isDefault: boolean
-}
+// Address interface is now imported from api.ts
 
 interface PaymentMethod {
   id: string
@@ -86,6 +100,11 @@ interface OrderDetail {
 }
 
 type TabType = "profile" | "orders" | "addresses" | "payment"
+
+// GHN location types (same as checkout)
+interface Province { ProvinceID: number; ProvinceName: string }
+interface District { DistrictID: number; DistrictName: string }
+interface Ward { WardCode: string; WardName: string }
 
 function ProfilePageContent() {
   const [activeTab, setActiveTab] = useState<TabType>("profile")
@@ -137,7 +156,7 @@ function ProfilePageContent() {
 
   // Real order history from API
   const [orders, setOrders] = useState<Order[]>([])
-  const [addresses, setAddresses] = useState<Address[]>([])
+  const [addresses, setAddresses] = useState<AddressType[]>([])
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([])
 
   // Fetch orders from API
@@ -171,7 +190,209 @@ function ProfilePageContent() {
     }
   }, [loading])
 
+  // Fetch addresses from API
+  useEffect(() => {
+    const fetchAddressesData = async () => {
+      try {
+        const addressesData = await fetchAddresses()
+        setAddresses(addressesData)
+      } catch (error) {
+        console.error('Error fetching addresses:', error)
+        setAddresses([])
+      }
+    }
+
+    if (!loading) {
+      fetchAddressesData()
+    }
+  }, [loading])
+
   const [selectedOrder, setSelectedOrder] = useState<OrderDetail | null>(null)
+
+  // GHN location states for Address Modal
+  const [provinces, setProvinces] = useState<Province[]>([])
+  const [districts, setDistricts] = useState<District[]>([])
+  const [wards, setWards] = useState<Ward[]>([])
+  const [loadingProvinces, setLoadingProvinces] = useState(false)
+  const [isAddressModalOpen, setIsAddressModalOpen] = useState(false)
+
+  // Address modal states
+  const [showAddressModal, setShowAddressModal] = useState(false)
+  const [editingAddress, setEditingAddress] = useState<AddressType | null>(null)
+  const [addressFormData, setAddressFormData] = useState({
+    name: "",
+    phone: "",
+    address: "",
+    province: "",
+    district: "",
+    ward: "",
+    provinceName: "",
+    districtName: "",
+    wardName: "",
+    hamlet: "",
+    isDefault: false
+  })
+
+  // Handle save address
+  const handleSaveAddress = async () => {
+    try {
+      // derive names from IDs before saving
+      const provinceName = provinces.find(p => p.ProvinceID.toString() === addressFormData.province)?.ProvinceName || addressFormData.provinceName || ""
+      const districtName = districts.find(d => d.DistrictID.toString() === addressFormData.district)?.DistrictName || addressFormData.districtName || ""
+      const wardName = wards.find(w => w.WardCode === addressFormData.ward)?.WardName || addressFormData.wardName || ""
+
+      const payload = {
+        ...addressFormData,
+        provinceName,
+        districtName,
+        wardName,
+      }
+
+      if (editingAddress) {
+        // Update existing
+        await updateAddress(editingAddress.id, payload)
+        setAddresses(addresses.map(a => a.id === editingAddress.id ? { ...a, ...payload } : a))
+        toast.success("Cập nhật địa chỉ thành công")
+      } else {
+        // Create new
+        await createAddress(payload)
+        const newAddresses = await fetchAddresses()
+        setAddresses(newAddresses)
+        toast.success("Thêm địa chỉ thành công")
+      }
+      setShowAddressModal(false)
+      setEditingAddress(null)
+      setAddressFormData({
+        name: "",
+        phone: "",
+        address: "",
+        province: "",
+        district: "",
+        ward: "",
+        provinceName: "",
+        districtName: "",
+        wardName: "",
+        hamlet: "",
+        isDefault: false
+      })
+    } catch (error) {
+      console.error('Error saving address:', error)
+      toast.error("Có lỗi xảy ra khi lưu địa chỉ")
+    }
+  }
+
+  // Handle set as default
+  const handleSetDefault = async (addressId: string) => {
+    try {
+      await setDefaultAddress(addressId)
+      const updatedAddresses = await fetchAddresses()
+      setAddresses(updatedAddresses)
+      toast.success("Đã đặt làm địa chỉ mặc định")
+    } catch (error) {
+      console.error('Error setting default address:', error)
+      toast.error("Có lỗi xảy ra")
+    }
+  }
+
+  // Handle edit address
+  const handleEditAddress = (address: AddressType) => {
+    setEditingAddress(address)
+    setAddressFormData({
+      name: address.name,
+      phone: address.phone,
+      address: address.address,
+      province: address.province || "",
+      district: address.district || "",
+      ward: address.ward || "",
+      provinceName: address.provinceName || "",
+      districtName: address.districtName || "",
+      wardName: address.wardName || "",
+      hamlet: address.hamlet || "",
+      isDefault: address.isDefault
+    })
+    setShowAddressModal(true)
+    setIsAddressModalOpen(true)
+  }
+
+  // Handle add new address
+  const handleAddAddress = () => {
+    setEditingAddress(null)
+    setAddressFormData({
+      name: "",
+      phone: "",
+      address: "",
+      province: "",
+      district: "",
+      ward: "",
+      provinceName: "",
+      districtName: "",
+      wardName: "",
+      hamlet: "",
+      isDefault: false
+    })
+    setShowAddressModal(true)
+    setIsAddressModalOpen(true)
+  }
+
+  // Load provinces when modal opens
+  useEffect(() => {
+    const loadProvinces = async () => {
+      try {
+        setLoadingProvinces(true)
+        const response = await api.get('/shipping/provinces')
+        const provincesData = response.data?.data || response.data || []
+        setProvinces(provincesData)
+      } catch (error) {
+        console.error('Error loading provinces:', error)
+        toast.error('Không thể tải danh sách tỉnh/thành phố')
+      } finally {
+        setLoadingProvinces(false)
+      }
+    }
+    if (showAddressModal) {
+      loadProvinces()
+    }
+  }, [showAddressModal])
+
+  // Load districts when province changes (in modal form)
+  useEffect(() => {
+    const loadDistricts = async (provinceId: string) => {
+      try {
+        const response = await api.get(`/shipping/districts/${provinceId}`)
+        const districtsData = response.data?.data || response.data || []
+        setDistricts(districtsData)
+      } catch (error) {
+        console.error('Error loading districts:', error)
+        toast.error('Không thể tải danh sách quận/huyện')
+      }
+    }
+    if (showAddressModal && addressFormData.province) {
+      loadDistricts(addressFormData.province)
+      // reset dependent fields when province changes
+      setAddressFormData(prev => ({ ...prev, district: "", ward: "", districtName: "", wardName: "" }))
+      setWards([])
+    }
+  }, [showAddressModal, addressFormData.province])
+
+  // Load wards when district changes (in modal form)
+  useEffect(() => {
+    const loadWards = async (districtId: string) => {
+      try {
+        const response = await api.get(`/shipping/wards/${districtId}`)
+        const wardsData = response.data?.data || response.data || []
+        setWards(wardsData)
+      } catch (error) {
+        console.error('Error loading wards:', error)
+        toast.error('Không thể tải danh sách phường/xã')
+      }
+    }
+    if (showAddressModal && addressFormData.district) {
+      loadWards(addressFormData.district)
+      // reset ward when district changes
+      setAddressFormData(prev => ({ ...prev, ward: "", wardName: "" }))
+    }
+  }, [showAddressModal, addressFormData.district])
+
 
   const handleViewOrderDetails = async (orderId: string) => {
     try {
@@ -709,45 +930,247 @@ function ProfilePageContent() {
               </div>
             )}
 
+            {/* Address Modal */}
+            {showAddressModal && (
+              <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                <div className="bg-card rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                  <div className="sticky top-0 bg-card border-b border-border p-6 flex items-center justify-between">
+                    <h2 className="text-2xl font-bold text-foreground">
+                      {editingAddress ? 'Sửa địa chỉ' : 'Thêm địa chỉ mới'}
+                    </h2>
+                    <button
+                      onClick={() => {
+                        setShowAddressModal(false)
+                        setEditingAddress(null)
+                      }}
+                      className="p-2 hover:bg-secondary rounded-lg transition-colors"
+                    >
+                      <XMarkIcon className="w-6 h-6 text-foreground" />
+                    </button>
+                  </div>
+
+                  <div className="p-6 space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="addr-name">Họ và tên *</Label>
+                        <Input
+                          id="addr-name"
+                          value={addressFormData.name}
+                          onChange={(e) => setAddressFormData({ ...addressFormData, name: e.target.value })}
+                          placeholder="Nhập họ và tên"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="addr-phone">Số điện thoại *</Label>
+                        <Input
+                          id="addr-phone"
+                          value={addressFormData.phone}
+                          onChange={(e) => setAddressFormData({ ...addressFormData, phone: e.target.value })}
+                          placeholder="Nhập số điện thoại"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="addr-address">Địa chỉ chi tiết *</Label>
+                      <Input
+                        id="addr-address"
+                        value={addressFormData.address}
+                        onChange={(e) => setAddressFormData({ ...addressFormData, address: e.target.value })}
+                        placeholder="Số nhà, tên đường..."
+                        required
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <Label>Tỉnh/Thành phố *</Label>
+                        <Select
+                          value={addressFormData.province || ""}
+                          onValueChange={(value) => setAddressFormData({ ...addressFormData, province: value })}
+                          disabled={loadingProvinces}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Chọn tỉnh/thành phố" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {provinces.map((province) => (
+                              <SelectItem key={`prov-${province.ProvinceID}`} value={province.ProvinceID.toString()}>
+                                {province.ProvinceName}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label>Quận/Huyện *</Label>
+                        <Select
+                          value={addressFormData.district || ""}
+                          onValueChange={(value) => setAddressFormData({ ...addressFormData, district: value })}
+                          disabled={!addressFormData.province || districts.length === 0}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Chọn quận/huyện" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {districts.map((district) => (
+                              <SelectItem key={`dist-${district.DistrictID}`} value={district.DistrictID.toString()}>
+                                {district.DistrictName}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label>Phường/Xã *</Label>
+                        <Select
+                          value={addressFormData.ward || ""}
+                          onValueChange={(value) => setAddressFormData({ ...addressFormData, ward: value })}
+                          disabled={!addressFormData.district || wards.length === 0}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Chọn phường/xã" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {wards.map((ward) => (
+                              <SelectItem key={`ward-${ward.WardCode}`} value={ward.WardCode}>
+                                {ward.WardName}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label>Thôn/Ấp</Label>
+                      <Input
+                        value={addressFormData.hamlet}
+                        onChange={(e) => setAddressFormData({ ...addressFormData, hamlet: e.target.value })}
+                        placeholder="Nhập thôn/ấp (không bắt buộc)"
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="is-default-addr"
+                        checked={addressFormData.isDefault}
+                        onChange={(e) => setAddressFormData({ ...addressFormData, isDefault: e.target.checked })}
+                        className="h-4 w-4"
+                      />
+                      <Label htmlFor="is-default-addr" className="cursor-pointer">
+                        Đặt làm địa chỉ mặc định
+                      </Label>
+                    </div>
+
+                    <div className="flex justify-end gap-3 pt-4 border-t border-border">
+                      <button
+                        onClick={() => {
+                          setShowAddressModal(false)
+                          setEditingAddress(null)
+                        }}
+                        className="px-4 py-2 border border-border rounded-lg hover:bg-secondary transition-colors text-foreground"
+                      >
+                        Hủy
+                      </button>
+                      <button
+                        onClick={handleSaveAddress}
+                        className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+                      >
+                        {editingAddress ? 'Cập nhật' : 'Thêm địa chỉ'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {activeTab === "addresses" && (
               <div className="bg-card rounded-lg border border-border p-6">
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-xl font-bold text-foreground">Địa chỉ giao hàng</h3>
-                  <button className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors">
+                  <button 
+                    onClick={handleAddAddress}
+                    className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+                  >
                     <PlusIcon className="w-4 h-4" />
                     Thêm địa chỉ
                   </button>
                 </div>
 
-                {profile.address ? (
+                <div className="mb-4 p-3 bg-primary/10 border border-primary/20 rounded-lg">
+                  <p className="text-sm text-foreground">
+                    <strong>💡 Mẹo:</strong> Bạn có thể lưu địa chỉ khi đặt hàng bằng cách tích chọn "Lưu địa chỉ này cho lần sau" ở trang thanh toán, hoặc nhấn nút "Thêm địa chỉ" ở trên.
+                  </p>
+                </div>
+
+                {addresses.length > 0 ? (
                   <div className="space-y-4">
-                    <div className="border border-border rounded-lg p-4">
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <p className="font-semibold text-foreground">{profile.name || "Chưa có tên"}</p>
-                            <span className="px-2 py-0.5 bg-primary/10 text-primary text-xs rounded-full">
-                              Mặc định
-                            </span>
+                    {addresses.map((address) => (
+                      <div key={address.id} className="border border-border rounded-lg p-4">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <p className="font-semibold text-foreground">{address.name}</p>
+                              {address.isDefault && (
+                                <span className="px-2 py-0.5 bg-primary/10 text-primary text-xs rounded-full">
+                                  Mặc định
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-sm text-muted-foreground mb-1">{address.phone}</p>
+                            <p className="text-sm text-foreground">
+                              {address.address}
+                              {address.wardName && `, ${address.wardName}`}
+                              {address.districtName && `, ${address.districtName}`}
+                              {address.provinceName && `, ${address.provinceName}`}
+                            </p>
                           </div>
-                          <p className="text-sm text-muted-foreground mb-1">{profile.phone || "Chưa có SĐT"}</p>
-                          <p className="text-sm text-foreground">
-                            {profile.address}, {profile.city}, {profile.postalCode}
-                          </p>
-                        </div>
-                        <div className="flex gap-2">
-                          <button className="p-2 hover:bg-secondary rounded-lg transition-colors">
-                            <PencilIcon className="w-4 h-4 text-foreground" />
-                          </button>
+                          <div className="flex gap-2">
+                            {!address.isDefault && (
+                              <button 
+                                className="px-3 py-1 text-sm text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                                onClick={() => handleSetDefault(address.id)}
+                              >
+                                Đặt làm mặc định
+                              </button>
+                            )}
+                            <button 
+                              className="p-2 hover:bg-secondary rounded-lg transition-colors"
+                              onClick={() => handleEditAddress(address)}
+                            >
+                              <PencilIcon className="w-4 h-4 text-foreground" />
+                            </button>
+                            <button 
+                              className="p-2 hover:bg-secondary rounded-lg transition-colors text-red-500"
+                              onClick={async () => {
+                                if (confirm('Bạn có chắc muốn xóa địa chỉ này?')) {
+                                  try {
+                                    await deleteAddress(address.id)
+                                    setAddresses(addresses.filter(a => a.id !== address.id))
+                                    toast.success("Đã xóa địa chỉ")
+                                  } catch (error) {
+                                    console.error('Error deleting address:', error)
+                                    toast.error("Có lỗi xảy ra khi xóa địa chỉ")
+                                  }
+                                }
+                              }}
+                            >
+                              <TrashIcon className="w-4 h-4" />
+                            </button>
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    ))}
                   </div>
                 ) : (
                   <div className="text-center py-12">
                     <MapPinIcon className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                     <p className="text-muted-foreground mb-4">Chưa có địa chỉ giao hàng</p>
-                    <p className="text-sm text-muted-foreground">Cập nhật thông tin cá nhân để thêm địa chỉ giao hàng</p>
+                    <p className="text-sm text-muted-foreground">Thêm địa chỉ mới để đơn giản hóa việc đặt hàng</p>
                   </div>
                 )}
               </div>

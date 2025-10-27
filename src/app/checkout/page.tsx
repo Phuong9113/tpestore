@@ -17,7 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useCart } from "@/contexts/CartContext";
 import { toast } from "sonner";
-import { api } from "@/lib/api";
+import { api, fetchAddresses, createAddress, type Address as AddressType } from "@/lib/api";
 import { PayPalProvider } from "@/components/PayPalProvider";
 import { PayPalButton } from "@/components/PayPalButton";
 
@@ -81,6 +81,11 @@ export default function CheckoutPage() {
   const [districts, setDistricts] = useState<District[]>([]);
   const [wards, setWards] = useState<Ward[]>([]);
 
+  // Address management
+  const [addresses, setAddresses] = useState<AddressType[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState<string>("new");
+  const [saveNewAddress, setSaveNewAddress] = useState(false);
+
   // Shipping fee
   const [shippingFee, setShippingFee] = useState<ShippingFee | null>(null);
   const [loadingFee, setLoadingFee] = useState(false);
@@ -90,43 +95,166 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(false);
   const [loadingProvinces, setLoadingProvinces] = useState(true);
 
-  // Load provinces on mount
+  // Load provinces and addresses on mount
   useEffect(() => {
     loadProvinces();
+    loadAddresses();
   }, []);
 
-  // Load districts when province changes
+  // Load saved addresses
+  const loadAddresses = async () => {
+    try {
+      const savedAddresses = await fetchAddresses();
+      setAddresses(savedAddresses);
+      // Set default address if exists
+      const defaultAddress = savedAddresses.find(addr => addr.isDefault);
+      if (defaultAddress) {
+        setSelectedAddressId(defaultAddress.id);
+        populateAddressInfo(defaultAddress);
+      }
+    } catch (error) {
+      console.error("Error loading addresses:", error);
+    }
+  };
+
+  // Populate form when address is selected
+  const populateAddressInfo = async (address: AddressType) => {
+    console.log("Populating address info from:", address);
+    console.log("Address has province:", address.province, "district:", address.district, "ward:", address.ward);
+    console.log("Address has provinceName:", address.provinceName, "districtName:", address.districtName, "wardName:", address.wardName);
+    
+    // Use stored IDs directly if available
+    let provinceId = address.province || "";
+    
+    // If not, try to find by name
+    if (!provinceId && address.provinceName && provinces.length > 0) {
+      const foundProvince = provinces.find(p => p.ProvinceName === address.provinceName);
+      if (foundProvince) {
+        provinceId = foundProvince.ProvinceID.toString();
+        console.log("Found province ID by name:", provinceId, "for:", address.provinceName);
+      }
+    }
+    
+    // Use stored district and ward IDs directly
+    let districtId = address.district || "";
+    let wardCode = address.ward || "";
+    
+    console.log("Initial IDs - province:", provinceId, "district:", districtId, "ward:", wardCode);
+    
+    // Always load districts if we have provinceId (even if we have districtId)
+    let loadedDistricts: District[] = [];
+    if (provinceId) {
+      console.log("Loading districts for province:", provinceId);
+      loadedDistricts = await loadDistricts(provinceId);
+    }
+    
+    // If don't have district ID, try to find by name from loaded districts
+    if (!districtId && address.districtName && loadedDistricts.length > 0) {
+      const foundDistrict = loadedDistricts.find((d: District) => d.DistrictName === address.districtName);
+      if (foundDistrict) {
+        districtId = foundDistrict.DistrictID.toString();
+        console.log("Found district ID by name:", districtId, "for:", address.districtName);
+      }
+    }
+    
+    // Always load wards if we have districtId
+    let loadedWards: Ward[] = [];
+    if (districtId) {
+      console.log("Loading wards for district:", districtId);
+      loadedWards = await loadWards(districtId);
+      
+      // If don't have ward code, try to find by name from loaded wards
+      if (!wardCode && address.wardName && loadedWards.length > 0) {
+        const foundWard = loadedWards.find((w: Ward) => w.WardName === address.wardName);
+        if (foundWard) {
+          wardCode = foundWard.WardCode;
+          console.log("Found ward code by name:", wardCode, "for:", address.wardName);
+        }
+      }
+    }
+    
+    // Set all shipping info at once
+    console.log("Final IDs being set - province:", provinceId, "district:", districtId, "ward:", wardCode);
+    
+    setShippingInfo({
+      name: address.name,
+      phone: address.phone,
+      address: address.address,
+      province: provinceId,
+      district: districtId,
+      ward: wardCode,
+      hamlet: address.hamlet || "",
+      email: "",
+    });
+    
+    console.log("Shipping info set with province:", provinceId, "district:", districtId, "ward:", wardCode);
+  };
+
+  // Handle address selection
+  const handleAddressSelect = (addressId: string) => {
+    setSelectedAddressId(addressId);
+  };
+
+  // Populate address info when selectedAddressId changes
   useEffect(() => {
-    if (shippingInfo.province) {
+    const loadSelectedAddress = async () => {
+      if (selectedAddressId === "new" || selectedAddressId === "" || addresses.length === 0) {
+        setIsLoadingSavedAddress(false);
+        return;
+      }
+
+      const selectedAddress = addresses.find(addr => addr.id === selectedAddressId);
+      if (selectedAddress) {
+        setIsLoadingSavedAddress(true);
+        await populateAddressInfo(selectedAddress);
+        console.log("Address populated, setting isLoadingSavedAddress to false");
+        // Small delay to ensure all states are updated
+        setTimeout(() => {
+          setIsLoadingSavedAddress(false);
+          console.log("isLoadingSavedAddress set to false");
+        }, 500);
+      }
+    };
+
+    loadSelectedAddress();
+  }, [selectedAddressId, addresses]);
+
+  // Track if we're loading address from saved addresses
+  const [isLoadingSavedAddress, setIsLoadingSavedAddress] = useState(false);
+
+  // Load districts when province changes (but not when loading saved address)
+  useEffect(() => {
+    console.log("useEffect for province change - province:", shippingInfo.province, "isLoadingSavedAddress:", isLoadingSavedAddress);
+    if (shippingInfo.province && !isLoadingSavedAddress) {
+      console.log("Loading districts because province changed");
       setIsAddressChanging(true);
       loadDistricts(shippingInfo.province);
-      setDistricts([]);
-      setWards([]);
-      setShippingInfo((prev) => ({ ...prev, district: "", ward: "" }));
-      // Clear shipping fee when province changes
-      setShippingFee(null);
+      // Don't reset district and ward if they already exist
+      // Only reset if province actually changed from a different one
     }
-  }, [shippingInfo.province]);
+  }, [shippingInfo.province, isLoadingSavedAddress]);
 
-  // Load wards when district changes
+  // Load wards when district changes (but not when loading saved address)
   useEffect(() => {
-    if (shippingInfo.district) {
+    console.log("useEffect for district change - district:", shippingInfo.district, "isLoadingSavedAddress:", isLoadingSavedAddress);
+    if (shippingInfo.district && !isLoadingSavedAddress) {
+      console.log("Loading wards because district changed");
       setIsAddressChanging(true);
       loadWards(shippingInfo.district);
-      setWards([]);
-      setShippingInfo((prev) => ({ ...prev, ward: "" }));
-      // Clear shipping fee when district changes
-      setShippingFee(null);
+      // Don't reset ward if it already exists
+      // Only reset if district actually changed from a different one
     }
-  }, [shippingInfo.district]);
+  }, [shippingInfo.district, isLoadingSavedAddress]);
 
   // Calculate shipping fee when address is complete
   useEffect(() => {
-    if (shippingInfo.province && shippingInfo.district && shippingInfo.ward) {
+    console.log("Check calculate shipping - province:", shippingInfo.province, "district:", shippingInfo.district, "ward:", shippingInfo.ward, "isLoadingSavedAddress:", isLoadingSavedAddress);
+    if (shippingInfo.province && shippingInfo.district && shippingInfo.ward && !isLoadingSavedAddress) {
       // Clear previous shipping fee to prevent showing old values
       setShippingFee(null);
       // Use setTimeout to ensure state is cleared before calculating
       setTimeout(() => {
+        console.log("Calculating shipping fee now");
         calculateShippingFee();
         setIsAddressChanging(false);
       }, 50);
@@ -135,6 +263,7 @@ export default function CheckoutPage() {
     shippingInfo.province,
     shippingInfo.district,
     shippingInfo.ward,
+    isLoadingSavedAddress,
   ]);
 
   const loadProvinces = async () => {
@@ -158,9 +287,11 @@ export default function CheckoutPage() {
       // GHN API returns { code, message, data: [...] }
       const districtsData = response.data?.data || response.data || [];
       setDistricts(districtsData);
+      return districtsData;
     } catch (error) {
       console.error("Error loading districts:", error);
       toast.error("Không thể tải danh sách quận/huyện");
+      return [];
     }
   };
 
@@ -170,9 +301,11 @@ export default function CheckoutPage() {
       // GHN API returns { code, message, data: [...] }
       const wardsData = response.data?.data || response.data || [];
       setWards(wardsData);
+      return wardsData;
     } catch (error) {
       console.error("Error loading wards:", error);
       toast.error("Không thể tải danh sách phường/xã");
+      return [];
     }
   };
 
@@ -210,7 +343,9 @@ export default function CheckoutPage() {
 
       console.log("GHN API response:", response);
       const shippingData = response.data || response;
+      console.log("Setting shipping fee:", shippingData);
       setShippingFee(shippingData);
+      console.log("Shipping fee set to state");
       toast.success(`Phí vận chuyển: ${formatVND(shippingData.total)}`);
     } catch (error) {
       console.error("Error calculating shipping fee:", error);
@@ -246,15 +381,28 @@ export default function CheckoutPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (
-      !shippingInfo.name ||
-      !shippingInfo.phone ||
-      !shippingInfo.address ||
-      !shippingInfo.province ||
-      !shippingInfo.district ||
-      !shippingInfo.ward
-    ) {
+    console.log("Submitting with selectedAddressId:", selectedAddressId);
+    console.log("Current shippingInfo:", shippingInfo);
+    console.log("Available addresses:", addresses);
+
+    // Check if required fields are filled
+    const isFormValid = shippingInfo.name && 
+                       shippingInfo.phone && 
+                       shippingInfo.address && 
+                       shippingInfo.province && 
+                       shippingInfo.district && 
+                       shippingInfo.ward;
+
+    if (!isFormValid) {
       toast.error("Vui lòng điền đầy đủ thông tin giao hàng");
+      console.error("Validation failed - missing fields:", {
+        name: shippingInfo.name,
+        phone: shippingInfo.phone,
+        address: shippingInfo.address,
+        province: shippingInfo.province,
+        district: shippingInfo.district,
+        ward: shippingInfo.ward
+      });
       return;
     }
 
@@ -269,9 +417,15 @@ export default function CheckoutPage() {
       setLoading(true);
 
       // Find names from IDs
-      const provinceName = provinces.find(p => p.ProvinceID.toString() === shippingInfo.province)?.ProvinceName || shippingInfo.province;
-      const districtName = districts.find(d => d.DistrictID.toString() === shippingInfo.district)?.DistrictName || shippingInfo.district;
-      const wardName = wards.find(w => w.WardCode === shippingInfo.ward)?.WardName || shippingInfo.ward;
+      const provinceName = provinces.find(p => p.ProvinceID.toString() === shippingInfo.province)?.ProvinceName || 
+                          shippingInfo.province || 
+                          addresses.find(a => a.id === selectedAddressId && a.provinceName)?.provinceName || "";
+      const districtName = districts.find(d => d.DistrictID.toString() === shippingInfo.district)?.DistrictName || 
+                          shippingInfo.district ||
+                          addresses.find(a => a.id === selectedAddressId && a.districtName)?.districtName || "";
+      const wardName = wards.find(w => w.WardCode === shippingInfo.ward)?.WardName || 
+                      shippingInfo.ward ||
+                      addresses.find(a => a.id === selectedAddressId && a.wardName)?.wardName || "";
 
       // Create order
       const orderData = {
@@ -291,13 +445,14 @@ export default function CheckoutPage() {
         deliverOption,
       };
 
-      console.log("Creating order with data:", orderData);
+      console.log("Creating order with data:", JSON.stringify(orderData, null, 2));
       let response;
       try {
         response = await api.post("/orders", orderData);
         console.log("Order creation response:", response);
       } catch (error: any) {
         console.error("Error creating order:", error);
+        console.error("Order data that failed:", JSON.stringify(orderData, null, 2));
         if (error.message.includes("401") || error.message.includes("Unauthorized")) {
           toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
           localStorage.removeItem('tpestore_token');
@@ -316,10 +471,39 @@ export default function CheckoutPage() {
       const orderId = response.id || response.data?.id;
       setCreatedOrderId(orderId);
 
+      // Save address if requested
+      if (saveNewAddress && selectedAddressId === "new") {
+        try {
+          await createAddress({
+            name: shippingInfo.name,
+            phone: shippingInfo.phone,
+            address: shippingInfo.address,
+            province: shippingInfo.province,
+            district: shippingInfo.district,
+            ward: shippingInfo.ward,
+            provinceName: provinceName,
+            districtName: districtName,
+            wardName: wardName,
+            hamlet: shippingInfo.hamlet,
+            isDefault: false
+          });
+          toast.success("Địa chỉ đã được lưu");
+        } catch (error) {
+          console.error("Error saving address:", error);
+          // Don't fail the order if address save fails
+        }
+      }
+
       if (paymentMethod === "COD") {
         // COD - create shipping order
         try {
           console.log("Creating shipping order for COD...");
+          console.log("Shipping info for GHN:", {
+            ward: shippingInfo.ward,
+            district: shippingInfo.district,
+            province: shippingInfo.province,
+            address: shippingInfo.address
+          });
           const shippingResponse = await api.post("/shipping/create-order", {
             orderId: orderId, // Link shipping order to database order
             toName: shippingInfo.name,
@@ -423,6 +607,60 @@ export default function CheckoutPage() {
                 <CardTitle>Thông tin giao hàng</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* Address selector - Always show */}
+                <div>
+                  <Label htmlFor="address-select">
+                    {addresses.length > 0 ? "Chọn địa chỉ đã lưu" : "Nhập địa chỉ giao hàng"}
+                  </Label>
+                  {addresses.length > 0 && (
+                    <Select
+                      value={selectedAddressId}
+                      onValueChange={handleAddressSelect}
+                    >
+                      <SelectTrigger id="address-select" className="w-full">
+                        <SelectValue placeholder="Chọn địa chỉ hoặc nhập mới" />
+                      </SelectTrigger>
+                      <SelectContent className="w-full">
+                        <SelectItem value="new">Nhập địa chỉ mới</SelectItem>
+                        {addresses.map((address) => {
+                          // Don't truncate - let it fill the select width naturally
+                          let displayText = address.name + " - " + address.address;
+                          
+                          // Add (Mặc định) if needed
+                          if (address.isDefault) {
+                            displayText += " (Mặc định)";
+                          }
+                          
+                          return (
+                            <SelectItem key={address.id} value={address.id}>
+                              {displayText}
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+
+                {/* Save address checkbox - only show when entering new address */}
+                {selectedAddressId === "new" && (
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="save-address"
+                      checked={saveNewAddress}
+                      onChange={(e) => setSaveNewAddress(e.target.checked)}
+                      className="h-4 w-4"
+                    />
+                    <Label htmlFor="save-address" className="text-sm cursor-pointer">
+                      Lưu địa chỉ này cho lần sau
+                    </Label>
+                  </div>
+                )}
+
+                {/* Address form - Show based on selection */}
+                {selectedAddressId === "new" || addresses.length === 0 ? (
+                <>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="name">Họ và tên *</Label>
@@ -507,9 +745,7 @@ export default function CheckoutPage() {
                       onValueChange={(value) =>
                         handleInputChange("district", value)
                       }
-                      disabled={
-                        !shippingInfo.province || districts.length === 0
-                      }
+                      disabled={!shippingInfo.province || districts.length === 0}
                     >
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Chọn quận/huyện" />
@@ -564,6 +800,40 @@ export default function CheckoutPage() {
                     placeholder="Nhập thôn/ấp (không bắt buộc)"
                   />
                 </div>
+                </>
+                ) : (
+                  <div className="border border-border rounded-lg p-4 bg-secondary/50">
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Thông tin từ địa chỉ đã chọn
+                    </p>
+                    <div className="space-y-2">
+                      <div className="flex items-start gap-2 break-words">
+                        <span className="text-sm font-medium text-foreground min-w-[80px]">Họ và tên:</span>
+                        <span className="text-sm text-foreground flex-1 break-words">{shippingInfo.name}</span>
+                      </div>
+                      <div className="flex items-start gap-2 break-words">
+                        <span className="text-sm font-medium text-foreground min-w-[80px]">SĐT:</span>
+                        <span className="text-sm text-foreground flex-1 break-words">{shippingInfo.phone}</span>
+                      </div>
+                      <div className="flex items-start gap-2 break-words">
+                        <span className="text-sm font-medium text-foreground min-w-[80px]">Địa chỉ:</span>
+                        <span className="text-sm text-foreground flex-1 break-words">
+                          {shippingInfo.address}
+                          {shippingInfo.ward && `, ${shippingInfo.ward}`}
+                          {shippingInfo.district && `, ${shippingInfo.district}`}
+                          {shippingInfo.province && `, ${shippingInfo.province}`}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedAddressId("new")}
+                        className="text-sm text-primary hover:underline mt-2"
+                      >
+                        Hoặc nhập địa chỉ mới
+                      </button>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
 

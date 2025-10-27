@@ -185,6 +185,8 @@ class GHNService {
       
       const payload = {
         // Required fields according to GHN documentation
+        from_district_id: 1442, // Default warehouse district - Hồ Chí Minh
+        from_ward_code: "1A0101", // Default ward code for warehouse
         to_ward_code: data.toWardCode,
         to_district_id: parseInt(data.toDistrictId),
         weight: parseInt(data.weight) || 200,
