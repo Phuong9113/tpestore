@@ -46,9 +46,9 @@ import {
   trackOrder,
   cancelOrder
 } from './controllers/shippingController.js';
-import paypalRouter from './routes/paypal.js';
 import userRoutes from './routes/users.js';
 import orderRoutes from './routes/orders.js';
+import zalopayRoutes from './routes/zalopay.js';
 
 const app = express();
 const prisma = new PrismaClient();
@@ -911,14 +911,14 @@ app.post('/api/shipping/create-order', authenticateToken, createShippingOrder);
 app.get('/api/shipping/track/:orderCode', trackOrder);
 app.post('/api/shipping/cancel/:orderCode', cancelOrder);
 
-// PayPal routes
-app.use('/api/paypal', paypalRouter);
-
 // User routes
 app.use('/api/users', userRoutes);
 
 // Order routes
 app.use('/api/orders', orderRoutes);
+
+// ZaloPay routes
+app.use('/api/payment/zalopay', zalopayRoutes);
 
 app.use('/api/admin', adminRouter);
 

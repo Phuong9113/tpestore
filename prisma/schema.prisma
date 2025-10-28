@@ -112,10 +112,9 @@ model Order {
   paymentStatus    PaymentStatus @default(PENDING)
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
-  paypalOrderId    String?
   paidAt           DateTime?
   transactionId    String?
-  paymentMethod    String?
+  paymentMethod    PaymentMethod @default(COD)
   ghnOrderCode     String?
   shippingName     String?
   shippingPhone    String?
@@ -178,4 +177,9 @@ enum PaymentStatus {
   PENDING
   PAID
   REFUNDED
+}
+
+enum PaymentMethod {
+  COD
+  ZALOPAY
 }

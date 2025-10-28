@@ -18,8 +18,6 @@ import { Separator } from "@/components/ui/separator";
 import { useCart } from "@/contexts/CartContext";
 import { toast } from "sonner";
 import { api, fetchAddresses, createAddress, type Address as AddressType } from "@/lib/api";
-import { PayPalProvider } from "@/components/PayPalProvider";
-import { PayPalButton } from "@/components/PayPalButton";
 
 interface Province {
   ProvinceID: number;
@@ -70,7 +68,7 @@ export default function CheckoutPage() {
     email: "",
   });
 
-  const [paymentMethod, setPaymentMethod] = useState<"COD" | "PAYPAL">("COD");
+  const [paymentMethod, setPaymentMethod] = useState<"COD" | "ZALOPAY">("COD");
   const [deliverOption, setDeliverOption] = useState<
     "xfast" | "fast" | "standard"
   >("xfast");
@@ -538,8 +536,32 @@ export default function CheckoutPage() {
           clearCart();
           router.push("/profile?tab=orders");
         }
+      } else if (paymentMethod === "ZALOPAY") {
+        // ZaloPay - create payment order
+        try {
+          console.log("Creating ZaloPay payment order...");
+          const zalopayResponse = await api.post("/payment/zalopay/create-order", {
+            orderId: orderId,
+            amount: totalPrice + (shippingFee?.total || 0),
+            description: `Thanh toán đơn hàng ${orderId}`,
+            returnUrl: `${window.location.origin}/payment/verify?orderId=${orderId}` // Redirect về trang verify với orderId
+          });
+
+          console.log("ZaloPay order created:", zalopayResponse);
+          
+          if (zalopayResponse.order_url) {
+            toast.success("Đang chuyển hướng đến ZaloPay...");
+            // Redirect to ZaloPay payment page
+            window.location.href = zalopayResponse.order_url;
+          } else {
+            toast.error("Không thể tạo đơn thanh toán ZaloPay");
+          }
+        } catch (zalopayError) {
+          console.error("Error creating ZaloPay order:", zalopayError);
+          toast.error("Có lỗi khi tạo đơn thanh toán ZaloPay. Vui lòng thử lại.");
+        }
       }
-      // For PayPal, we'll show the PayPal button instead of redirecting
+      // Order created successfully
     } catch (error) {
       console.error("Error creating order:", error);
       if (
@@ -561,14 +583,6 @@ export default function CheckoutPage() {
     }
   };
 
-  const handlePayPalSuccess = (orderId: string) => {
-    clearCart();
-    router.push("/profile?tab=orders");
-  };
-
-  const handlePayPalError = (error: string) => {
-    toast.error(error);
-  };
 
   const formatVND = (value: number | undefined) =>
     (value || 0).toLocaleString("vi-VN", {
@@ -875,7 +889,7 @@ export default function CheckoutPage() {
               <CardContent>
                 <RadioGroup
                   value={paymentMethod}
-                  onValueChange={(value: "COD" | "PAYPAL") =>
+                  onValueChange={(value: "COD" | "ZALOPAY") =>
                     setPaymentMethod(value)
                   }
                 >
@@ -884,8 +898,8 @@ export default function CheckoutPage() {
                     <Label htmlFor="cod">Thanh toán khi nhận hàng (COD)</Label>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="PAYPAL" id="paypal" />
-                    <Label htmlFor="paypal">Thanh toán qua PayPal</Label>
+                    <RadioGroupItem value="ZALOPAY" id="zalopay" />
+                    <Label htmlFor="zalopay">Thanh toán bằng ZaloPay</Label>
                   </div>
                 </RadioGroup>
               </CardContent>
@@ -951,51 +965,24 @@ export default function CheckoutPage() {
                   </div>
                 </div>
 
-                {paymentMethod === "COD" ? (
-                  <Button
-                    type="submit"
-                    size="lg"
-                    className="w-full"
-                    disabled={
-                      loading ||
-                      !shippingInfo.province ||
-                      !shippingInfo.district ||
-                      !shippingInfo.ward
-                    }
-                  >
-                    {loading ? "Đang xử lý..." : "Đặt hàng COD"}
-                  </Button>
-                ) : (
-                  <div className="space-y-4">
-                    <Button
-                      type="submit"
-                      size="lg"
-                      className="w-full"
-                      disabled={
-                        loading ||
-                        !shippingInfo.province ||
-                        !shippingInfo.district ||
-                        !shippingInfo.ward
-                      }
-                    >
-                      {loading ? "Đang tạo đơn hàng..." : "Tạo đơn hàng PayPal"}
-                    </Button>
-
-                    {createdOrderId && (
-                      <div className="border rounded-lg p-4">
-                        <h4 className="font-medium mb-3">Thanh toán PayPal</h4>
-                        <PayPalProvider>
-                          <PayPalButton
-                            orderId={createdOrderId}
-                            totalAmount={totalPrice + (shippingFee?.total || 0)}
-                            onSuccess={handlePayPalSuccess}
-                            onError={handlePayPalError}
-                          />
-                        </PayPalProvider>
-                      </div>
-                    )}
-                  </div>
-                )}
+                <Button
+                  type="submit"
+                  size="lg"
+                  className="w-full"
+                  disabled={
+                    loading ||
+                    !shippingInfo.province ||
+                    !shippingInfo.district ||
+                    !shippingInfo.ward
+                  }
+                >
+                  {loading 
+                    ? "Đang xử lý..." 
+                    : paymentMethod === "COD" 
+                      ? "Đặt hàng COD" 
+                      : "Thanh toán ZaloPay"
+                  }
+                </Button>
               </CardContent>
             </Card>
           </div>

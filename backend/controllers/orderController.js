@@ -63,6 +63,12 @@ export const createOrder = async (req, res) => {
       deliverOption = 'xfast' 
     } = req.body;
     
+    // Validate payment method
+    const validPaymentMethods = ['COD', 'ZALOPAY'];
+    if (!validPaymentMethods.includes(paymentMethod)) {
+      return res.status(400).json({ error: 'Invalid payment method' });
+    }
+    
     // Check if user is authenticated
     if (!req.user?.id) {
       return res.status(401).json({ error: 'User not authenticated' });
@@ -109,7 +115,8 @@ export const createOrder = async (req, res) => {
       data: {
         userId: req.user.id,
         totalPrice: finalTotal,
-        status: 'PENDING',
+        status: paymentMethod === 'ZALOPAY' ? 'PENDING' : 'PROCESSING',
+        paymentStatus: paymentMethod === 'ZALOPAY' ? 'PENDING' : 'PAID',
         paymentMethod: paymentMethod,
         // Store shipping information
         shippingName: shippingInfo?.name,
