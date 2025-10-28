@@ -171,9 +171,12 @@ function ProfilePageContent() {
           date: new Date(order.createdAt).toISOString().split('T')[0],
           total: order.totalPrice,
           status: order.status === 'PENDING' ? 'Đang xử lý' : 
+                  order.status === 'PROCESSING' ? 'Đang xử lý' :
                   order.status === 'PAID' ? 'Đã thanh toán' :
+                  order.status === 'SHIPPING' ? 'Đang giao' :
                   order.status === 'SHIPPED' ? 'Đang giao' :
-                  order.status === 'COMPLETED' ? 'Đã giao' : 'Đã hủy',
+                  order.status === 'COMPLETED' ? 'Đã giao' :
+                  order.status === 'CANCELLED' ? 'Đã hủy' : 'Đang xử lý',
           items: order.orderItems?.length || 0,
           ghnOrderCode: order.ghnOrderCode
         })) || []
@@ -407,9 +410,12 @@ function ProfilePageContent() {
         id: orderData.id,
         date: new Date(orderData.createdAt).toISOString().split('T')[0],
         status: orderData.status === 'PENDING' ? 'Đang xử lý' : 
+                orderData.status === 'PROCESSING' ? 'Đang xử lý' :
                 orderData.status === 'PAID' ? 'Đã thanh toán' :
+                orderData.status === 'SHIPPING' ? 'Đang giao' :
                 orderData.status === 'SHIPPED' ? 'Đang giao' :
-                orderData.status === 'COMPLETED' ? 'Đã giao' : 'Đã hủy',
+                orderData.status === 'COMPLETED' ? 'Đã giao' :
+                orderData.status === 'CANCELLED' ? 'Đã hủy' : 'Đang xử lý',
         items: orderData.orderItems?.map((item: any) => ({
           id: item.product.id,
           name: item.product.name,
@@ -529,8 +535,12 @@ function ProfilePageContent() {
         return "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
       case "Đang xử lý":
         return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
+      case "Đã thanh toán":
+        return "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
       case "Đã hủy":
         return "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+      default:
+        return "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"
     }
   }
 
