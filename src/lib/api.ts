@@ -1,4 +1,23 @@
-const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4000") + "/api";
+const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4000") + "/api/v1";
+
+function getApiOrigin(): string {
+  try {
+    const url = new URL(API_BASE);
+    return `${url.protocol}//${url.hostname}${url.port ? `:${url.port}` : ""}`;
+  } catch {
+    return "http://localhost:4000";
+  }
+}
+
+function normalizeImageUrl(path?: string | null): string {
+  const p = (path || "").trim();
+  if (!p) return "";
+  if (p.startsWith("http://") || p.startsWith("https://")) return p;
+  const origin = getApiOrigin();
+  if (p.startsWith("/uploads/")) return `${origin}${p}`;
+  if (p.startsWith("uploads/")) return `${origin}/${p}`;
+  return `${origin}/${p.replace(/^\/+/, "")}`;
+}
 
 export interface ApiCategory {
   id: string;
@@ -24,7 +43,8 @@ export interface ApiProduct {
   price: number;
   originalPrice?: number;
   image: string;
-  inStock: boolean;
+  inStock?: boolean;
+  stock?: number;
   category?: ApiCategory;
   reviews?: ApiReview[];
   specs?: ApiSpec[];
@@ -66,10 +86,10 @@ function mapApiProductToUi(product: ApiProduct): UiProduct {
     name: product.name,
     price: product.price,
     originalPrice: product.originalPrice,
-    image: product.image,
+    image: normalizeImageUrl(product.image),
     category: product.category?.name || "Khác",
     rating: avgRating,
-    inStock: product.inStock,
+    inStock: typeof product.stock === 'number' ? product.stock > 0 : !!product.inStock,
     description: product.description,
     specs: product.specs,
   };
@@ -78,23 +98,27 @@ function mapApiProductToUi(product: ApiProduct): UiProduct {
 export async function fetchProducts(): Promise<UiProduct[]> {
   const res = await fetch(`${API_BASE}/products`, { cache: "no-store" });
   if (!res.ok) throw new Error(`Failed to fetch products: ${res.status}`);
-  const data: ApiProduct[] = await res.json();
-  return data.map(mapApiProductToUi);
+  const json = await res.json();
+  const list: ApiProduct[] = Array.isArray(json) ? json : (Array.isArray(json?.data) ? json.data : []);
+  return list.map(mapApiProductToUi);
 }
 
 export async function fetchProductById(id: string): Promise<UiProduct | null> {
   const res = await fetch(`${API_BASE}/products/${id}`, { cache: "no-store" });
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(`Failed to fetch product ${id}: ${res.status}`);
-  const data: ApiProduct = await res.json();
-  return mapApiProductToUi(data);
+  const json = await res.json();
+  const product: ApiProduct = json?.data ?? json;
+  return mapApiProductToUi(product);
 }
 
 // Categories API
 export async function fetchCategories(): Promise<ApiCategory[]> {
   const res = await fetch(`${API_BASE}/categories`, { cache: "no-store" });
   if (!res.ok) throw new Error(`Failed to fetch categories: ${res.status}`);
-  return await res.json();
+  const json = await res.json();
+  const list: ApiCategory[] = Array.isArray(json) ? json : (Array.isArray(json?.data) ? json.data : []);
+  return list.map((c) => ({ ...c, image: normalizeImageUrl(c.image) }));
 }
 
 // Admin APIs
@@ -180,7 +204,11 @@ export async function fetchAdminProducts(params?: {
     headers: getAuthHeaders(),
   });
   if (!res.ok) throw new Error(`Failed to fetch admin products: ${res.status}`);
-  return await res.json();
+  const data = await res.json();
+  const normalized = Array.isArray(data?.products)
+    ? data.products.map((p: any) => ({ ...p, image: normalizeImageUrl(p.image) }))
+    : [];
+  return { products: normalized, pagination: data.pagination };
 }
 
 export interface CreateProductData {
@@ -204,7 +232,8 @@ export async function createProduct(productData: CreateProductData): Promise<Adm
     body: JSON.stringify(productData),
   });
   if (!res.ok) throw new Error(`Failed to create product: ${res.status}`);
-  return await res.json();
+  const prod = await res.json();
+  return { ...prod, image: normalizeImageUrl(prod?.image) } as AdminProduct;
 }
 
 export async function updateProduct(id: string, productData: Partial<CreateProductData>): Promise<AdminProduct> {
@@ -214,7 +243,8 @@ export async function updateProduct(id: string, productData: Partial<CreateProdu
     body: JSON.stringify(productData),
   });
   if (!res.ok) throw new Error(`Failed to update product: ${res.status}`);
-  return await res.json();
+  const prod = await res.json();
+  return { ...prod, image: normalizeImageUrl(prod?.image) } as AdminProduct;
 }
 
 export async function deleteProduct(id: string): Promise<void> {
@@ -257,22 +287,24 @@ export async function fetchAdminCategories(params?: {
   if (params?.limit) searchParams.set('limit', params.limit.toString());
   if (params?.search) searchParams.set('search', params.search);
 
-  const res = await fetch(`${API_BASE}/categories?${searchParams}`, {
-    headers: { 'Content-Type': 'application/json' },
+  const res = await fetch(`${API_BASE}/admin/categories?${searchParams}`, {
+    headers: getAuthHeaders(),
   });
   if (!res.ok) throw new Error(`Failed to fetch admin categories: ${res.status}`);
-  const categories = await res.json();
-  return { categories, pagination: { page: 1, limit: 10, total: categories.length, pages: 1 } };
+  const data = await res.json();
+  const list: AdminCategory[] = Array.isArray(data?.categories) ? data.categories : [];
+  return { categories: list.map((c) => ({ ...c, image: normalizeImageUrl(c.image) })), pagination: data.pagination };
 }
 
 export async function createCategory(categoryData: Partial<AdminCategory>): Promise<AdminCategory> {
-  const res = await fetch(`${API_BASE}/categories`, {
+  const res = await fetch(`${API_BASE}/admin/categories`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getAuthHeaders(),
     body: JSON.stringify(categoryData),
   });
   if (!res.ok) throw new Error(`Failed to create category: ${res.status}`);
-  return await res.json();
+  const cat = await res.json();
+  return { ...cat, image: normalizeImageUrl(cat?.image) } as AdminCategory;
 }
 
 export async function updateCategory(id: string, categoryData: Partial<AdminCategory>): Promise<AdminCategory> {
@@ -282,13 +314,14 @@ export async function updateCategory(id: string, categoryData: Partial<AdminCate
     body: JSON.stringify(categoryData),
   });
   if (!res.ok) throw new Error(`Failed to update category: ${res.status}`);
-  return await res.json();
+  const cat = await res.json();
+  return { ...cat, image: normalizeImageUrl(cat?.image) } as AdminCategory;
 }
 
 export async function deleteCategory(id: string): Promise<void> {
-  const res = await fetch(`${API_BASE}/categories/${id}`, {
+  const res = await fetch(`${API_BASE}/admin/categories/${id}`, {
     method: 'DELETE',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getAuthHeaders(),
   });
   if (!res.ok) throw new Error(`Failed to delete category: ${res.status}`);
 }
@@ -337,7 +370,8 @@ export async function fetchUserProfile(): Promise<AdminUser> {
     headers: getAuthHeaders(),
   });
   if (!res.ok) throw new Error(`Failed to fetch user profile: ${res.status}`);
-  return await res.json();
+  const json = await res.json();
+  return json?.data ?? json;
 }
 
 export async function updateUserProfile(userData: Partial<AdminUser>): Promise<AdminUser> {
@@ -393,7 +427,8 @@ export async function fetchAddresses(): Promise<Address[]> {
     headers: getAuthHeaders(),
   });
   if (!res.ok) throw new Error(`Failed to fetch addresses: ${res.status}`);
-  return await res.json();
+  const json = await res.json();
+  return Array.isArray(json) ? json : (Array.isArray(json?.data) ? json.data : []);
 }
 
 export async function fetchAddressById(id: string): Promise<Address> {
@@ -401,7 +436,8 @@ export async function fetchAddressById(id: string): Promise<Address> {
     headers: getAuthHeaders(),
   });
   if (!res.ok) throw new Error(`Failed to fetch address: ${res.status}`);
-  return await res.json();
+  const json = await res.json();
+  return json?.data ?? json;
 }
 
 export async function createAddress(addressData: Partial<Address>): Promise<Address> {
@@ -411,7 +447,8 @@ export async function createAddress(addressData: Partial<Address>): Promise<Addr
     body: JSON.stringify(addressData),
   });
   if (!res.ok) throw new Error(`Failed to create address: ${res.status}`);
-  return await res.json();
+  const json = await res.json();
+  return json?.data ?? json;
 }
 
 export async function updateAddress(id: string, addressData: Partial<Address>): Promise<Address> {
@@ -421,7 +458,8 @@ export async function updateAddress(id: string, addressData: Partial<Address>): 
     body: JSON.stringify(addressData),
   });
   if (!res.ok) throw new Error(`Failed to update address: ${res.status}`);
-  return await res.json();
+  const json = await res.json();
+  return json?.data ?? json;
 }
 
 export async function deleteAddress(id: string): Promise<void> {
@@ -438,7 +476,8 @@ export async function setDefaultAddress(id: string): Promise<Address> {
     headers: getAuthHeaders(),
   });
   if (!res.ok) throw new Error(`Failed to set default address: ${res.status}`);
-  return await res.json();
+  const json = await res.json();
+  return json?.data ?? json;
 }
 
 // File upload (images)

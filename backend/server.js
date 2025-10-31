@@ -55,6 +55,7 @@ const prisma = new PrismaClient();
 
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
 
 // Configure multer for file uploads
 const __filename = fileURLToPath(import.meta.url);

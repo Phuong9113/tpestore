@@ -9,7 +9,7 @@ import ToastContainer from "./ToastContainer"
 
 export default function ConditionalLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  const isAdminRoute = pathname?.startsWith("/admin")
+  const isAdminRoute = pathname?.startsWith("/admin") || pathname?.startsWith("/dashboard/admin")
 
   if (isAdminRoute) {
     return <>{children}</>

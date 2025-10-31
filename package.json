@@ -7,9 +7,10 @@
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
-    "server": "node backend/server.js",
+    "server": "node backend/src/server.js",
     "dev:full": "concurrently \"npm run server\" \"npm run dev\" --names \"backend,frontend\" --prefix-colors \"blue,green\"",
-    "create-admin": "node scripts/create-admin.js"
+    "create-admin": "node scripts/create-admin.js",
+    "test:zalopay": "node scripts/test-zalopay.js"
   },
   "dependencies": {
     "@geist-ui/react": "^2.2.5",

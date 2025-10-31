@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { createCategory, updateCategory, type AdminCategory } from "@/lib/api"
+import { createCategory, updateCategory, uploadImage, type AdminCategory } from "@/lib/api"
 
 interface CategoryModalProps {
   isOpen: boolean
@@ -73,22 +73,7 @@ export default function CategoryModal({ isOpen, onClose, category }: CategoryMod
     }
   }
 
-  const uploadImage = async (file: File): Promise<string> => {
-    const formData = new FormData()
-    formData.append('image', file)
-    
-    const response = await fetch('http://localhost:4000/api/upload', {
-      method: 'POST',
-      body: formData,
-    })
-    
-    if (!response.ok) {
-      throw new Error('Failed to upload image')
-    }
-    
-    const data = await response.json()
-    return `http://localhost:4000${data.url}`
-  }
+  // Use unified upload API from lib/api
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
