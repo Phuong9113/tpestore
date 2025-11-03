@@ -6,6 +6,7 @@ import { Analytics } from "@vercel/analytics/next"
 import "./globals.css"
 import { CartProvider } from "@/contexts/CartContext"
 import ConditionalLayout from "@/components/ConditionalLayout"
+import ChatDock from "@/components/ChatDock"
 
 export const metadata: Metadata = {
   title: "TPE Store",
@@ -27,6 +28,7 @@ export default function RootLayout({
           </Suspense>
         </CartProvider>
         <Analytics />
+        <ChatDock />
       </body>
     </html>
   )

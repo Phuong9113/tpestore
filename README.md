@@ -85,6 +85,45 @@ backend/
 
 ## Getting Started
 
+### AI Chat (Google Gemini)
+
+Backend (Express) lives in `ai-chat/` and exposes `/api/chat` and `/api/chat-stream`.
+
+1) Configure environment:
+
+Create an `.env` file inside `ai-chat/` with:
+
+```
+GEMINI_API_KEY=YOUR_API_KEY
+PORT=4000
+```
+
+2) Install and run server:
+
+```
+cd ai-chat
+npm install
+npm run start
+```
+
+The server starts at `http://localhost:4000`.
+
+3) Frontend usage:
+
+Use the `src/components/ChatBox.tsx` component anywhere in the Next.js app. Optionally set `NEXT_PUBLIC_AI_API_URL` in your environment to point to your deployed backend.
+
+#### Deploy notes
+
+- Render (Backend):
+  - Create a Web Service from `ai-chat/` directory.
+  - Set Environment Variables: `GEMINI_API_KEY`, `PORT=4000`.
+  - Build Command: `npm install`
+  - Start Command: `npm start`
+
+- Vercel (Frontend):
+  - Deploy the Next.js project as usual.
+  - Add `NEXT_PUBLIC_AI_API_URL` env var pointing to your Render service URL (e.g. `https://your-app.onrender.com`).
+
 1) Install deps
 
 ```
