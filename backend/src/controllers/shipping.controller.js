@@ -66,14 +66,25 @@ export const createShippingOrder = async (req, res, next) => {
 			}
 		} catch {}
 		const result = await ghnService.createShippingOrder(payload);
+		let updatedOrder = null;
 		try {
 			const orderCode = result?.data?.order_code;
 			const orderId = req.body?.orderId;
 			if (orderCode && orderId) {
-				await prisma.order.update({ where: { id: orderId }, data: { ghnOrderCode: orderCode, status: "SHIPPING" } });
+				updatedOrder = await prisma.order.update({ 
+					where: { id: orderId }, 
+					data: { ghnOrderCode: orderCode, status: "PROCESSING" },
+					include: { orderItems: { include: { product: { select: { id: true, name: true, image: true, price: true } } } } }
+				});
+				// eslint-disable-next-line no-console
+				console.log("[GHN][CreateOrder] Updated order status to PROCESSING:", orderId, "ghnOrderCode:", orderCode);
 			}
-		} catch {}
-		success(res, result);
+		} catch (err) {
+			// eslint-disable-next-line no-console
+			console.error("[GHN][CreateOrder] Error updating order:", err);
+		}
+		// Return both GHN result and updated order info
+		success(res, { ...result, order: updatedOrder });
 	} catch (err) {
 		return res.status(500).json({ error: "GHN API Error", message: err.message });
 	}

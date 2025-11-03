@@ -8,6 +8,14 @@ import {
   deleteCategory, 
   type AdminCategory 
 } from "@/lib/api"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"
 
 export default function CategoriesPage() {
   const [categories, setCategories] = useState<AdminCategory[]>([])
@@ -16,18 +24,28 @@ export default function CategoriesPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 10,
+    total: 0,
+    pages: 0
+  })
 
   useEffect(() => {
     loadData()
-  }, [searchQuery])
+  }, [searchQuery, pagination.page])
 
   const loadData = async () => {
     try {
       setLoading(true)
       const data = await fetchAdminCategories({
+        page: pagination.page,
+        limit: pagination.limit,
         search: searchQuery || undefined
       })
       setCategories(data.categories)
+      setPagination(data.pagination)
+      setError("")
     } catch (err) {
       setError("Không thể tải dữ liệu danh mục")
     } finally {
@@ -59,6 +77,8 @@ export default function CategoriesPage() {
   const handleModalClose = () => {
     setIsModalOpen(false)
     setEditingCategory(null)
+    // Reset về trang 1 khi reload sau khi thêm/sửa
+    setPagination({ ...pagination, page: 1 })
     loadData() // Reload data after modal closes
   }
 
@@ -83,11 +103,14 @@ export default function CategoriesPage() {
       <div className="bg-card border border-border rounded-lg p-4">
         <div className="relative">
           <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-          <input
+            <input
             type="text"
             placeholder="Tìm kiếm danh mục..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              setSearchQuery(e.target.value)
+              setPagination({ ...pagination, page: 1 }) // Reset về trang 1 khi search
+            }}
             className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
           />
         </div>
@@ -102,7 +125,7 @@ export default function CategoriesPage() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Tổng danh mục</p>
-              <p className="text-2xl font-bold text-foreground">{categories.length}</p>
+              <p className="text-2xl font-bold text-foreground">{loading ? "..." : pagination.total || 0}</p>
             </div>
           </div>
         </div>
@@ -193,6 +216,74 @@ export default function CategoriesPage() {
             </div>
           </div>
           ))}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {!loading && !error && pagination.pages > 1 && (
+        <div className="bg-card border border-border rounded-lg p-4">
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  onClick={(e) => {
+                    e.preventDefault()
+                    if (pagination.page > 1) {
+                      setPagination({ ...pagination, page: pagination.page - 1 })
+                    }
+                  }}
+                  className={pagination.page <= 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                />
+              </PaginationItem>
+              {Array.from({ length: pagination.pages }, (_, i) => i + 1).map((pageNum) => {
+                // Hiển thị trang đầu, cuối, và các trang xung quanh trang hiện tại
+                if (
+                  pageNum === 1 ||
+                  pageNum === pagination.pages ||
+                  (pageNum >= pagination.page - 1 && pageNum <= pagination.page + 1)
+                ) {
+                  return (
+                    <PaginationItem key={pageNum}>
+                      <PaginationLink
+                        onClick={(e) => {
+                          e.preventDefault()
+                          setPagination({ ...pagination, page: pageNum })
+                        }}
+                        isActive={pageNum === pagination.page}
+                        className="cursor-pointer"
+                      >
+                        {pageNum}
+                      </PaginationLink>
+                    </PaginationItem>
+                  )
+                } else if (
+                  pageNum === pagination.page - 2 ||
+                  pageNum === pagination.page + 2
+                ) {
+                  return (
+                    <PaginationItem key={pageNum}>
+                      <span className="px-3 py-1">...</span>
+                    </PaginationItem>
+                  )
+                }
+                return null
+              })}
+              <PaginationItem>
+                <PaginationNext
+                  onClick={(e) => {
+                    e.preventDefault()
+                    if (pagination.page < pagination.pages) {
+                      setPagination({ ...pagination, page: pagination.page + 1 })
+                    }
+                  }}
+                  className={pagination.page >= pagination.pages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+          <div className="text-center mt-2 text-sm text-muted-foreground">
+            Trang {pagination.page} / {pagination.pages} ({pagination.total} danh mục)
+          </div>
         </div>
       )}
 

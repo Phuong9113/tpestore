@@ -4,6 +4,14 @@ import { useState, useEffect } from "react"
 import { MagnifyingGlassIcon, EyeIcon, XMarkIcon } from "@heroicons/react/24/outline"
 import OrderDetailModal from "@/components/admin/OrderDetailModal"
 import { api, cancelOrder } from "@/lib/api"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"
 
 interface Order {
   id: string
@@ -363,6 +371,69 @@ export default function OrdersPage() {
             </tbody>
           </table>
         </div>
+        
+        {/* Pagination */}
+        {!loading && pagination.pages > 1 && (
+          <div className="p-4 border-t border-border">
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    onClick={() => {
+                      if (pagination.page > 1) {
+                        setPagination({ ...pagination, page: pagination.page - 1 })
+                      }
+                    }}
+                    className={pagination.page <= 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                  />
+                </PaginationItem>
+                {Array.from({ length: pagination.pages }, (_, i) => i + 1).map((pageNum) => {
+                  // Hiển thị trang đầu, cuối, và các trang xung quanh trang hiện tại
+                  if (
+                    pageNum === 1 ||
+                    pageNum === pagination.pages ||
+                    (pageNum >= pagination.page - 1 && pageNum <= pagination.page + 1)
+                  ) {
+                    return (
+                      <PaginationItem key={pageNum}>
+                        <PaginationLink
+                          onClick={() => setPagination({ ...pagination, page: pageNum })}
+                          isActive={pageNum === pagination.page}
+                          className="cursor-pointer"
+                        >
+                          {pageNum}
+                        </PaginationLink>
+                      </PaginationItem>
+                    )
+                  } else if (
+                    pageNum === pagination.page - 2 ||
+                    pageNum === pagination.page + 2
+                  ) {
+                    return (
+                      <PaginationItem key={pageNum}>
+                        <span className="px-3 py-1">...</span>
+                      </PaginationItem>
+                    )
+                  }
+                  return null
+                })}
+                <PaginationItem>
+                  <PaginationNext
+                    onClick={() => {
+                      if (pagination.page < pagination.pages) {
+                        setPagination({ ...pagination, page: pagination.page + 1 })
+                      }
+                    }}
+                    className={pagination.page >= pagination.pages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+            <div className="text-center mt-2 text-sm text-muted-foreground">
+              Trang {pagination.page} / {pagination.pages} ({pagination.total} đơn hàng)
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Order Detail Modal */}

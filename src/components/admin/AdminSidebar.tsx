@@ -12,12 +12,12 @@ import {
 } from "@heroicons/react/24/outline"
 
 const navigation = [
-  { name: "Tổng quan", href: "/admin", icon: HomeIcon },
-  { name: "Danh mục", href: "/admin/categories", icon: TagIcon },
-  { name: "Sản phẩm", href: "/admin/products", icon: ShoppingBagIcon },
-  { name: "Người dùng", href: "/admin/users", icon: UsersIcon },
-  { name: "Đơn hàng", href: "/admin/orders", icon: ClipboardDocumentListIcon },
-  { name: "Thống kê", href: "/admin/analytics", icon: ChartBarIcon },
+  { name: "Tổng quan", href: "/dashboard/admin", icon: HomeIcon },
+  { name: "Danh mục", href: "/dashboard/admin/categories", icon: TagIcon },
+  { name: "Sản phẩm", href: "/dashboard/admin/products", icon: ShoppingBagIcon },
+  { name: "Người dùng", href: "/dashboard/admin/users", icon: UsersIcon },
+  { name: "Đơn hàng", href: "/dashboard/admin/orders", icon: ClipboardDocumentListIcon },
+  { name: "Thống kê", href: "/dashboard/admin/analytics", icon: ChartBarIcon },
 ]
 
 export default function AdminSidebar() {
@@ -27,7 +27,7 @@ export default function AdminSidebar() {
     <div className="w-64 bg-card border-r border-border flex flex-col">
       {/* Logo */}
       <div className="h-16 flex items-center px-6 border-b border-border">
-        <Link href="/admin" className="text-xl font-bold text-foreground">
+        <Link href="/dashboard/admin" className="text-xl font-bold text-foreground">
           TPE Admin
         </Link>
       </div>
@@ -35,7 +35,16 @@ export default function AdminSidebar() {
       {/* Navigation */}
       <nav className="flex-1 px-4 py-6 space-y-1">
         {navigation.map((item) => {
-          const isActive = pathname === item.href
+          // Special handling for dashboard root to avoid matching child routes
+          let isActive = false
+          if (item.href === "/dashboard/admin") {
+            // Exact match only for dashboard root
+            isActive = pathname === item.href
+          } else {
+            // For other routes, match exact or with trailing path
+            isActive = pathname === item.href || pathname?.startsWith(item.href + "/")
+          }
+          
           return (
             <Link
               key={item.name}

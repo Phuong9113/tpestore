@@ -479,8 +479,435 @@ export const getOrderStats = async (req, res, next) => {
 		const shippingOrders = await prisma.order.count({ where: { status: "SHIPPING" } });
 		const completedOrders = await prisma.order.count({ where: { status: "COMPLETED" } });
 		const cancelledOrders = await prisma.order.count({ where: { status: "CANCELLED" } });
-		const totalRevenue = await prisma.order.aggregate({ where: { status: "COMPLETED" }, _sum: { totalPrice: true } });
+		const totalRevenue = await prisma.order.aggregate({ 
+			where: { 
+				paymentStatus: "PAID",
+				status: { not: "CANCELLED" }
+			}, 
+			_sum: { totalPrice: true } 
+		});
 		res.json({ totalOrders, pendingOrders, processingOrders, shippingOrders, completedOrders, cancelledOrders, totalRevenue: totalRevenue._sum.totalPrice || 0 });
+	} catch (err) {
+		next(err);
+	}
+};
+
+export const getDashboardStats = async (req, res, next) => {
+	try {
+		const now = new Date();
+		const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+		const previousPeriodStart = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
+		
+		const [
+			totalRevenueResult,
+			previousRevenueResult,
+			totalOrders,
+			previousTotalOrders,
+			totalProducts,
+			previousTotalProducts,
+			totalUsers,
+			previousTotalUsers,
+		] = await Promise.all([
+			// Total revenue (paid orders - excludes cancelled)
+			prisma.order.aggregate({
+				where: { 
+					paymentStatus: "PAID",
+					status: { not: "CANCELLED" }
+				},
+				_sum: { totalPrice: true },
+			}),
+			// Previous period revenue
+			prisma.order.aggregate({
+				where: {
+					paymentStatus: "PAID",
+					status: { not: "CANCELLED" },
+					createdAt: { gte: previousPeriodStart, lt: thirtyDaysAgo },
+				},
+				_sum: { totalPrice: true },
+			}),
+			// Total orders
+			prisma.order.count(),
+			// Previous period orders
+			prisma.order.count({
+				where: { createdAt: { gte: previousPeriodStart, lt: thirtyDaysAgo } },
+			}),
+			// Total products
+			prisma.product.count(),
+			// Previous period products (30 days ago)
+			prisma.product.count({
+				where: { createdAt: { lt: thirtyDaysAgo } },
+			}),
+			// Total users
+			prisma.user.count({ where: { role: "CUSTOMER" } }),
+			// Previous period users
+			prisma.user.count({
+				where: {
+					role: "CUSTOMER",
+					createdAt: { gte: previousPeriodStart, lt: thirtyDaysAgo },
+				},
+			}),
+		]);
+		
+		const totalRevenue = totalRevenueResult._sum.totalPrice || 0;
+		const previousRevenue = previousRevenueResult._sum.totalPrice || 0;
+		const revenueChange = previousRevenue > 0 ? ((totalRevenue - previousRevenue) / previousRevenue) * 100 : 0;
+		
+		const ordersChange = previousTotalOrders > 0 ? ((totalOrders - previousTotalOrders) / previousTotalOrders) * 100 : 0;
+		const productsChange = previousTotalProducts > 0 ? ((totalProducts - previousTotalProducts) / previousTotalProducts) * 100 : totalProducts > 0 ? 100 : 0;
+		const usersChange = previousTotalUsers > 0 ? ((totalUsers - previousTotalUsers) / previousTotalUsers) * 100 : totalUsers > 0 ? 100 : 0;
+		
+		res.json({
+			totalRevenue,
+			previousRevenue,
+			revenueChange: revenueChange.toFixed(2),
+			totalOrders,
+			previousTotalOrders,
+			ordersChange: ordersChange.toFixed(2),
+			totalProducts,
+			previousTotalProducts,
+			productsChange: productsChange.toFixed(2),
+			totalUsers,
+			previousTotalUsers,
+			usersChange: usersChange.toFixed(2),
+		});
+	} catch (err) {
+		next(err);
+	}
+};
+
+export const getCategoryRevenue = async (req, res, next) => {
+	try {
+		const completedOrders = await prisma.order.findMany({
+			where: { 
+				paymentStatus: "PAID",
+				status: { not: "CANCELLED" }
+			},
+			include: {
+				orderItems: {
+					include: {
+						product: {
+							include: {
+								category: true,
+							},
+						},
+					},
+				},
+			},
+		});
+		
+		const categoryRevenue = {};
+		let totalRevenue = 0;
+		
+		completedOrders.forEach((order) => {
+			order.orderItems.forEach((item) => {
+				const categoryName = item.product.category.name;
+				const revenue = item.price * item.quantity;
+				
+				if (!categoryRevenue[categoryName]) {
+					categoryRevenue[categoryName] = {
+						name: categoryName,
+						revenue: 0,
+						orders: 0,
+					};
+				}
+				
+				categoryRevenue[categoryName].revenue += revenue;
+				totalRevenue += revenue;
+			});
+		});
+		
+		// Convert to array and calculate percentages
+		const result = Object.values(categoryRevenue).map((cat) => ({
+			...cat,
+			percentage: totalRevenue > 0 ? (cat.revenue / totalRevenue) * 100 : 0,
+		}));
+		
+		// Sort by revenue descending
+		result.sort((a, b) => b.revenue - a.revenue);
+		
+		res.json({
+			categories: result,
+			totalRevenue,
+		});
+	} catch (err) {
+		next(err);
+	}
+};
+
+export const getTopProducts = async (req, res, next) => {
+	try {
+		const { limit = 5 } = req.query;
+		
+		// Get all paid orders (excluding cancelled)
+		const completedOrders = await prisma.order.findMany({
+			where: { 
+				paymentStatus: "PAID",
+				status: { not: "CANCELLED" }
+			},
+			include: {
+				orderItems: {
+					include: {
+						product: {
+							select: {
+								id: true,
+								name: true,
+								price: true,
+							},
+						},
+					},
+				},
+			},
+		});
+		
+		const productStats = {};
+		
+		completedOrders.forEach((order) => {
+			order.orderItems.forEach((item) => {
+				const productId = item.product.id;
+				const productName = item.product.name;
+				const quantity = item.quantity;
+				const revenue = item.price * quantity;
+				
+				if (!productStats[productId]) {
+					productStats[productId] = {
+						id: productId,
+						name: productName,
+						sales: 0,
+						revenue: 0,
+					};
+				}
+				
+				productStats[productId].sales += quantity;
+				productStats[productId].revenue += revenue;
+			});
+		});
+		
+		// Convert to array and sort by sales
+		const result = Object.values(productStats)
+			.sort((a, b) => b.sales - a.sales)
+			.slice(0, parseInt(limit));
+		
+		// Calculate trend (mock for now, can be enhanced with previous period data)
+		const productsWithTrend = result.map((product) => ({
+			...product,
+			trend: "+0%", // Can be enhanced later
+		}));
+		
+		res.json({ products: productsWithTrend });
+	} catch (err) {
+		next(err);
+	}
+};
+
+export const getSalesByRegion = async (req, res, next) => {
+	try {
+		const completedOrders = await prisma.order.findMany({
+			where: { 
+				paymentStatus: "PAID",
+				status: { not: "CANCELLED" }
+			},
+			select: {
+				totalPrice: true,
+				shippingProvince: true,
+			},
+		});
+		
+		const regionStats = {};
+		let totalSales = 0;
+		
+		completedOrders.forEach((order) => {
+			const region = order.shippingProvince || "Khác";
+			const revenue = order.totalPrice;
+			
+			if (!regionStats[region]) {
+				regionStats[region] = {
+					name: region,
+					sales: 0,
+					orders: 0,
+				};
+			}
+			
+			regionStats[region].sales += revenue;
+			regionStats[region].orders += 1;
+			totalSales += revenue;
+		});
+		
+		// Convert to array and calculate percentages
+		const result = Object.values(regionStats).map((region) => ({
+			...region,
+			percentage: totalSales > 0 ? (region.sales / totalSales) * 100 : 0,
+		}));
+		
+		// Sort by sales descending
+		result.sort((a, b) => b.sales - a.sales);
+		
+		// Find top region
+		const topRegion = result.length > 0 ? result[0].name : "N/A";
+		
+		res.json({
+			regions: result,
+			topRegion,
+			totalSales,
+		});
+	} catch (err) {
+		next(err);
+	}
+};
+
+export const getRevenueStatistics = async (req, res, next) => {
+	try {
+		const { period = "30days" } = req.query;
+		
+		let startDate, endDate, groupBy;
+		
+		endDate = new Date();
+		endDate.setHours(23, 59, 59, 999);
+		
+		switch (period) {
+			case "7days":
+				startDate = new Date();
+				startDate.setDate(startDate.getDate() - 7);
+				startDate.setHours(0, 0, 0, 0);
+				groupBy = "day";
+				break;
+			case "30days":
+				startDate = new Date();
+				startDate.setDate(startDate.getDate() - 30);
+				startDate.setHours(0, 0, 0, 0);
+				groupBy = "day";
+				break;
+			case "90days":
+				startDate = new Date();
+				startDate.setDate(startDate.getDate() - 90);
+				startDate.setHours(0, 0, 0, 0);
+				groupBy = "day";
+				break;
+			case "1year":
+				startDate = new Date();
+				startDate.setFullYear(startDate.getFullYear() - 1);
+				startDate.setHours(0, 0, 0, 0);
+				groupBy = "month";
+				break;
+			default:
+				startDate = new Date();
+				startDate.setDate(startDate.getDate() - 30);
+				startDate.setHours(0, 0, 0, 0);
+				groupBy = "day";
+		}
+		
+		// Get all paid orders (excluding cancelled) in the date range
+		const orders = await prisma.order.findMany({
+			where: {
+				paymentStatus: "PAID",
+				status: { not: "CANCELLED" },
+				createdAt: {
+					gte: startDate,
+					lte: endDate,
+				},
+			},
+			select: {
+				totalPrice: true,
+				createdAt: true,
+			},
+			orderBy: {
+				createdAt: "asc",
+			},
+		});
+		
+		// Group by day or month
+		const revenueData = {};
+		const totals = {
+			totalRevenue: 0,
+			totalOrders: orders.length,
+			averageOrderValue: 0,
+		};
+		
+		orders.forEach((order) => {
+			const date = new Date(order.createdAt);
+			let key;
+			
+			if (groupBy === "day") {
+				key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+			} else {
+				key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+			}
+			
+			if (!revenueData[key]) {
+				revenueData[key] = {
+					period: key,
+					revenue: 0,
+					orders: 0,
+				};
+			}
+			
+			revenueData[key].revenue += order.totalPrice;
+			revenueData[key].orders += 1;
+			totals.totalRevenue += order.totalPrice;
+		});
+		
+		// Convert to array and sort
+		const chartData = Object.values(revenueData)
+			.map((item) => {
+				let label;
+				if (groupBy === "day") {
+					const [year, month, day] = item.period.split("-");
+					label = `${day}/${month}`;
+				} else {
+					const [year, month] = item.period.split("-");
+					const monthNames = ["T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8", "T9", "T10", "T11", "T12"];
+					label = monthNames[parseInt(month) - 1];
+				}
+				return {
+					...item,
+					label,
+				};
+			})
+			.sort((a, b) => a.period.localeCompare(b.period));
+		
+		// Calculate average order value
+		totals.averageOrderValue = totals.totalOrders > 0 ? totals.totalRevenue / totals.totalOrders : 0;
+		
+		// Calculate previous period for comparison
+		let previousStartDate, previousEndDate;
+		if (groupBy === "day") {
+			const daysDiff = Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24));
+			previousEndDate = new Date(startDate);
+			previousEndDate.setMilliseconds(previousEndDate.getMilliseconds() - 1);
+			previousStartDate = new Date(previousEndDate);
+			previousStartDate.setDate(previousStartDate.getDate() - daysDiff);
+		} else {
+			previousStartDate = new Date(startDate);
+			previousStartDate.setFullYear(previousStartDate.getFullYear() - 1);
+			previousEndDate = new Date(startDate);
+			previousEndDate.setMilliseconds(previousEndDate.getMilliseconds() - 1);
+		}
+		
+		const previousPeriodRevenue = await prisma.order.aggregate({
+			where: {
+				paymentStatus: "PAID",
+				status: { not: "CANCELLED" },
+				createdAt: {
+					gte: previousStartDate,
+					lte: previousEndDate,
+				},
+			},
+			_sum: {
+				totalPrice: true,
+			},
+		});
+		
+		const previousRevenue = previousPeriodRevenue._sum.totalPrice || 0;
+		const revenueChange = previousRevenue > 0 ? ((totals.totalRevenue - previousRevenue) / previousRevenue) * 100 : 0;
+		
+		res.json({
+			period,
+			chartData,
+			totals: {
+				...totals,
+				previousRevenue,
+				revenueChange: revenueChange.toFixed(2),
+			},
+		});
 	} catch (err) {
 		next(err);
 	}

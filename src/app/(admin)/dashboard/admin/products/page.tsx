@@ -11,6 +11,14 @@ import {
   importProductsFromExcel,
   type AdminProduct 
 } from "@/lib/api"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"
 
 export default function ProductsPage() {
   const [searchQuery, setSearchQuery] = useState("")
@@ -25,6 +33,12 @@ export default function ProductsPage() {
   const [isTemplatePickerOpen, setIsTemplatePickerOpen] = useState(false)
   const [templateCategoryId, setTemplateCategoryId] = useState<string>("")
   const [downloading, setDownloading] = useState(false)
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 10,
+    total: 0,
+    pages: 0
+  })
 
   const handleDownloadTemplate = async (categoryId: string) => {
     try {
@@ -49,13 +63,15 @@ export default function ProductsPage() {
 
   useEffect(() => {
     loadData()
-  }, [searchQuery, selectedCategory])
+  }, [searchQuery, selectedCategory, pagination.page])
 
   const loadData = async () => {
     try {
       setLoading(true)
       const [productsResult, categoriesResult] = await Promise.allSettled([
         fetchAdminProducts({
+          page: pagination.page,
+          limit: pagination.limit,
           search: searchQuery || undefined,
           categoryId: selectedCategory !== "all" ? selectedCategory : undefined
         }),
@@ -64,6 +80,7 @@ export default function ProductsPage() {
 
       if (productsResult.status === 'fulfilled') {
         setProducts(productsResult.value.products)
+        setPagination(productsResult.value.pagination)
         setError("")
       } else {
         setError("Không thể tải dữ liệu sản phẩm")
@@ -107,6 +124,8 @@ export default function ProductsPage() {
   const handleModalClose = () => {
     setIsModalOpen(false)
     setEditingProduct(null)
+    // Reset về trang 1 khi reload sau khi thêm/sửa
+    setPagination({ ...pagination, page: 1 })
     loadData() // Reload data after modal closes
   }
 
@@ -203,13 +222,19 @@ export default function ProductsPage() {
               type="text"
               placeholder="Tìm kiếm sản phẩm..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                setSearchQuery(e.target.value)
+                setPagination({ ...pagination, page: 1 }) // Reset về trang 1 khi search
+              }}
               className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
           <select
             value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
+            onChange={(e) => {
+              setSelectedCategory(e.target.value)
+              setPagination({ ...pagination, page: 1 }) // Reset về trang 1 khi đổi category
+            }}
             className="px-4 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
           >
             {allCategories.map((cat) => (
@@ -321,6 +346,74 @@ export default function ProductsPage() {
         {!loading && !error && products.length === 0 && (
           <div className="text-center py-12">
             <p className="text-muted-foreground">Không tìm thấy sản phẩm nào</p>
+          </div>
+        )}
+        
+        {/* Pagination */}
+        {!loading && !error && pagination.pages > 1 && (
+          <div className="p-4 border-t border-border">
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    onClick={(e) => {
+                      e.preventDefault()
+                      if (pagination.page > 1) {
+                        setPagination({ ...pagination, page: pagination.page - 1 })
+                      }
+                    }}
+                    className={pagination.page <= 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                  />
+                </PaginationItem>
+                {Array.from({ length: pagination.pages }, (_, i) => i + 1).map((pageNum) => {
+                  // Hiển thị trang đầu, cuối, và các trang xung quanh trang hiện tại
+                  if (
+                    pageNum === 1 ||
+                    pageNum === pagination.pages ||
+                    (pageNum >= pagination.page - 1 && pageNum <= pagination.page + 1)
+                  ) {
+                    return (
+                      <PaginationItem key={pageNum}>
+                        <PaginationLink
+                          onClick={(e) => {
+                            e.preventDefault()
+                            setPagination({ ...pagination, page: pageNum })
+                          }}
+                          isActive={pageNum === pagination.page}
+                          className="cursor-pointer"
+                        >
+                          {pageNum}
+                        </PaginationLink>
+                      </PaginationItem>
+                    )
+                  } else if (
+                    pageNum === pagination.page - 2 ||
+                    pageNum === pagination.page + 2
+                  ) {
+                    return (
+                      <PaginationItem key={pageNum}>
+                        <span className="px-3 py-1">...</span>
+                      </PaginationItem>
+                    )
+                  }
+                  return null
+                })}
+                <PaginationItem>
+                  <PaginationNext
+                    onClick={(e) => {
+                      e.preventDefault()
+                      if (pagination.page < pagination.pages) {
+                        setPagination({ ...pagination, page: pagination.page + 1 })
+                      }
+                    }}
+                    className={pagination.page >= pagination.pages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+            <div className="text-center mt-2 text-sm text-muted-foreground">
+              Trang {pagination.page} / {pagination.pages} ({pagination.total} sản phẩm)
+            </div>
           </div>
         )}
       </div>

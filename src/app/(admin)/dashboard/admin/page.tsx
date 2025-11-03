@@ -1,36 +1,88 @@
+"use client"
+
+import { useState, useEffect } from "react"
 import StatsCard from "@/components/admin/StatsCard"
 import RevenueChart from "@/components/admin/RevenueChart"
 import RecentOrders from "@/components/admin/RecentOrders"
 import { ShoppingBagIcon, UsersIcon, CurrencyDollarIcon, ClipboardDocumentListIcon } from "@heroicons/react/24/outline"
+import { fetchDashboardStats } from "@/lib/api"
 
 export default function AdminDashboard() {
+  const [dashboardStats, setDashboardStats] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    
+    const loadStats = async () => {
+      try {
+        setLoading(true)
+        const data = await fetchDashboardStats()
+        
+        if (!cancelled) {
+          setDashboardStats(data)
+        }
+      } catch (err) {
+        if (!cancelled) {
+          console.error("Failed to load dashboard stats:", err)
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false)
+        }
+      }
+    }
+
+    loadStats()
+    
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
+      maximumFractionDigits: 0,
+    }).format(amount)
+  }
+
   const stats = [
     {
       name: "Tổng doanh thu",
-      value: "₫124,500,000",
-      change: "+12.5%",
-      trend: "up" as const,
+      value: loading ? "..." : dashboardStats ? formatCurrency(dashboardStats.totalRevenue) : "₫0",
+      change: loading ? "" : dashboardStats 
+        ? `${parseFloat(dashboardStats.revenueChange) >= 0 ? "+" : ""}${dashboardStats.revenueChange}%`
+        : "0%",
+      trend: (dashboardStats?.revenueChange && parseFloat(dashboardStats.revenueChange) >= 0) ? "up" as const : "down" as const,
       icon: CurrencyDollarIcon,
     },
     {
       name: "Đơn hàng",
-      value: "1,234",
-      change: "+8.2%",
-      trend: "up" as const,
+      value: loading ? "..." : dashboardStats ? dashboardStats.totalOrders.toLocaleString("vi-VN") : "0",
+      change: loading ? "" : dashboardStats 
+        ? `${parseFloat(dashboardStats.ordersChange) >= 0 ? "+" : ""}${dashboardStats.ordersChange}%`
+        : "0%",
+      trend: (dashboardStats?.ordersChange && parseFloat(dashboardStats.ordersChange) >= 0) ? "up" as const : "down" as const,
       icon: ClipboardDocumentListIcon,
     },
     {
       name: "Sản phẩm",
-      value: "156",
-      change: "+3",
-      trend: "up" as const,
+      value: loading ? "..." : dashboardStats ? dashboardStats.totalProducts.toLocaleString("vi-VN") : "0",
+      change: loading ? "" : dashboardStats 
+        ? `${parseFloat(dashboardStats.productsChange) >= 0 ? "+" : ""}${dashboardStats.productsChange}%`
+        : "0",
+      trend: (dashboardStats?.productsChange && parseFloat(dashboardStats.productsChange) >= 0) ? "up" as const : "down" as const,
       icon: ShoppingBagIcon,
     },
     {
       name: "Khách hàng",
-      value: "892",
-      change: "+15.3%",
-      trend: "up" as const,
+      value: loading ? "..." : dashboardStats ? dashboardStats.totalUsers.toLocaleString("vi-VN") : "0",
+      change: loading ? "" : dashboardStats 
+        ? `${parseFloat(dashboardStats.usersChange) >= 0 ? "+" : ""}${dashboardStats.usersChange}%`
+        : "0%",
+      trend: (dashboardStats?.usersChange && parseFloat(dashboardStats.usersChange) >= 0) ? "up" as const : "down" as const,
       icon: UsersIcon,
     },
   ]
@@ -52,7 +104,7 @@ export default function AdminDashboard() {
 
       {/* Charts and Tables */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <RevenueChart />
+        <RevenueChart period="30days" />
         <RecentOrders />
       </div>
     </div>

@@ -495,6 +495,116 @@ export async function uploadImage(file: File): Promise<string> {
   return path.startsWith('http') ? path : `http://localhost:4000${path}`;
 }
 
+// Revenue Statistics API
+export interface RevenueStatistics {
+  period: string;
+  chartData: Array<{
+    period: string;
+    label: string;
+    revenue: number;
+    orders: number;
+  }>;
+  totals: {
+    totalRevenue: number;
+    totalOrders: number;
+    averageOrderValue: number;
+    previousRevenue: number;
+    revenueChange: string;
+  };
+}
+
+export async function fetchRevenueStatistics(period: string = "30days"): Promise<RevenueStatistics> {
+  const res = await fetch(`${API_BASE}/admin/revenue/statistics?period=${period}`, {
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) throw new Error(`Failed to fetch revenue statistics: ${res.status}`);
+  return await res.json();
+}
+
+// Dashboard Statistics API
+export interface DashboardStats {
+  totalRevenue: number;
+  previousRevenue: number;
+  revenueChange: string;
+  totalOrders: number;
+  previousTotalOrders: number;
+  ordersChange: string;
+  totalProducts: number;
+  previousTotalProducts: number;
+  productsChange: string;
+  totalUsers: number;
+  previousTotalUsers: number;
+  usersChange: string;
+}
+
+export async function fetchDashboardStats(): Promise<DashboardStats> {
+  const res = await fetch(`${API_BASE}/admin/dashboard/stats`, {
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) throw new Error(`Failed to fetch dashboard stats: ${res.status}`);
+  return await res.json();
+}
+
+// Category Revenue API
+export interface CategoryRevenue {
+  categories: Array<{
+    name: string;
+    revenue: number;
+    orders: number;
+    percentage: number;
+  }>;
+  totalRevenue: number;
+}
+
+export async function fetchCategoryRevenue(): Promise<CategoryRevenue> {
+  const res = await fetch(`${API_BASE}/admin/analytics/category-revenue`, {
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) throw new Error(`Failed to fetch category revenue: ${res.status}`);
+  return await res.json();
+}
+
+// Top Products API
+export interface TopProduct {
+  id: string;
+  name: string;
+  sales: number;
+  revenue: number;
+  trend: string;
+}
+
+export interface TopProductsResponse {
+  products: TopProduct[];
+}
+
+export async function fetchTopProducts(limit: number = 5): Promise<TopProductsResponse> {
+  const res = await fetch(`${API_BASE}/admin/analytics/top-products?limit=${limit}`, {
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) throw new Error(`Failed to fetch top products: ${res.status}`);
+  return await res.json();
+}
+
+// Sales by Region API
+export interface SalesByRegion {
+  regions: Array<{
+    name: string;
+    sales: number;
+    orders: number;
+    percentage: number;
+  }>;
+  topRegion: string;
+  totalSales: number;
+}
+
+export async function fetchSalesByRegion(): Promise<SalesByRegion> {
+  const res = await fetch(`${API_BASE}/admin/analytics/sales-by-region`, {
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) throw new Error(`Failed to fetch sales by region: ${res.status}`);
+  return await res.json();
+}
+
 // API Client object for easy usage in components
 export const api = {
   // Users API

@@ -114,7 +114,7 @@ export const handleZaloPayCallback = async (req, res) => {
 			};
 			const ghnResult = await ghnService.createShippingOrder(shippingData);
 			if (ghnResult?.data?.order_code) {
-				await prisma.order.update({ where: { id: order.id }, data: { ghnOrderCode: ghnResult.data.order_code, status: "SHIPPING" } });
+				await prisma.order.update({ where: { id: order.id }, data: { ghnOrderCode: ghnResult.data.order_code, status: "PROCESSING" } });
 				try {
 					// eslint-disable-next-line no-console
 					console.log("[ZLP][Callback] GHN order created:", ghnResult.data.order_code);
@@ -180,7 +180,7 @@ export const verifyZaloPayPayment = async (req, res) => {
 					};
 					const ghnResult = await ghnService.createShippingOrder(shippingData);
 					if (ghnResult.data?.order_code)
-						await prisma.order.update({ where: { id: order.id }, data: { ghnOrderCode: ghnResult.data.order_code, status: "SHIPPING" } });
+						await prisma.order.update({ where: { id: order.id }, data: { ghnOrderCode: ghnResult.data.order_code, status: "PROCESSING" } });
 				}
 			} catch {}
 			return success(res, {

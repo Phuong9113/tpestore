@@ -23,6 +23,11 @@ import {
 	getAdminOrderById,
 	updateAdminOrderStatus,
 	getOrderStats,
+	getRevenueStatistics,
+	getDashboardStats,
+	getCategoryRevenue,
+	getTopProducts,
+	getSalesByRegion,
 	getGHNOrderDetail,
 	cancelOrder,
 } from "../../controllers/admin.controller.js";
@@ -60,6 +65,11 @@ router.get("/users/stats", getUserStats);
 
 // Orders (place specific routes BEFORE parameterized :id)
 router.get("/orders/stats", getOrderStats);
+router.get("/revenue/statistics", getRevenueStatistics);
+router.get("/dashboard/stats", getDashboardStats);
+router.get("/analytics/category-revenue", getCategoryRevenue);
+router.get("/analytics/top-products", getTopProducts);
+router.get("/analytics/sales-by-region", getSalesByRegion);
 router.get("/orders/ghn/:orderCode", getGHNOrderDetail);
 router.get("/orders", getAdminOrders);
 router.get("/orders/:id", getAdminOrderById);

@@ -45,15 +45,6 @@ export default function CheckoutPage() {
   const router = useRouter();
   const { items, totalPrice, clearCart } = useCart();
 
-  // Check authentication
-  useEffect(() => {
-    const token = localStorage.getItem('tpestore_token');
-    if (!token) {
-      toast.error('Vui lòng đăng nhập để tiếp tục');
-      router.push('/login');
-      return;
-    }
-  }, [router]);
 
 
   // Form states
@@ -96,16 +87,32 @@ export default function CheckoutPage() {
   // Loading states
   const [loading, setLoading] = useState(false);
   const [loadingProvinces, setLoadingProvinces] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // Load provinces and addresses on mount
+  // Check authentication first
   useEffect(() => {
+    const token = localStorage.getItem('tpestore_token');
+    if (!token) {
+      toast.error('Vui lòng đăng nhập để tiếp tục');
+      router.push('/login');
+      return;
+    }
+    setIsAuthenticated(true);
+  }, [router]);
+
+  // Load provinces and addresses on mount (only if authenticated)
+  useEffect(() => {
+    if (!isAuthenticated) return;
     loadProvinces();
     loadAddresses();
-  }, []);
+  }, [isAuthenticated]);
 
   // Load saved addresses
   const loadAddresses = async () => {
     try {
+      const token = localStorage.getItem('tpestore_token');
+      if (!token) return; // Don't load if no token
+      
       const savedAddresses = await fetchAddresses();
       setAddresses(savedAddresses);
       // Set default address if exists
@@ -116,6 +123,12 @@ export default function CheckoutPage() {
       }
     } catch (error) {
       console.error("Error loading addresses:", error);
+      // If it's a 401, user is not authenticated, redirect
+      if (error instanceof Error && error.message.includes('401')) {
+        toast.error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+        localStorage.removeItem('tpestore_token');
+        router.push('/login');
+      }
     }
   };
 
@@ -601,6 +614,17 @@ export default function CheckoutPage() {
       style: "currency",
       currency: "VND",
     });
+
+  // Don't render if not authenticated (will redirect)
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-muted-foreground">Đang chuyển hướng đến trang đăng nhập...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (items.length === 0) {
     return (

@@ -4,6 +4,14 @@ import { useState, useEffect } from "react"
 import { MagnifyingGlassIcon, UserPlusIcon, PencilIcon, TrashIcon, ShieldCheckIcon } from "@heroicons/react/24/outline"
 import UserModal from "@/components/admin/UserModal"
 import { fetchAdminUsers, updateUser, deleteUser, type AdminUser } from "@/lib/api"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"
 
 type User = AdminUser
 
@@ -15,17 +23,30 @@ export default function UsersPage() {
   const [editingUser, setEditingUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 10,
+    total: 0,
+    pages: 0
+  })
 
   // Fetch users from API
   useEffect(() => {
     fetchUsers()
-  }, [])
+  }, [searchQuery, selectedRole, pagination.page])
 
   const fetchUsers = async () => {
     try {
       setLoading(true)
-      const response = await fetchAdminUsers()
+      const response = await fetchAdminUsers({
+        page: pagination.page,
+        limit: pagination.limit,
+        search: searchQuery || undefined,
+        role: selectedRole !== "all" ? selectedRole : undefined
+      })
       setUsers(response.users || [])
+      setPagination(response.pagination)
+      setError("")
     } catch (err) {
       setError('Không thể tải danh sách người dùng')
       console.error('Error fetching users:', err)
@@ -33,14 +54,6 @@ export default function UsersPage() {
       setLoading(false)
     }
   }
-
-  const filteredUsers = users.filter((user) => {
-    const matchesSearch =
-      (user.name?.toLowerCase().includes(searchQuery.toLowerCase()) || false) ||
-      user.email.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesRole = selectedRole === "all" || user.role === selectedRole
-    return matchesSearch && matchesRole
-  })
 
   const handleEdit = (user: User) => {
     setEditingUser(user)
@@ -51,7 +64,8 @@ export default function UsersPage() {
     if (confirm("Bạn có chắc chắn muốn xóa người dùng này?")) {
       try {
         await deleteUser(userId)
-        setUsers(users.filter((user) => user.id !== userId))
+        // Reload users instead of filtering locally
+        await fetchUsers()
       } catch (err) {
         setError('Không thể xóa người dùng')
         console.error('Error deleting user:', err)
@@ -68,8 +82,9 @@ export default function UsersPage() {
     try {
       if (editingUser) {
         // Update existing user
-        const updatedUser = await updateUser(editingUser.id, userData)
-        setUsers(users.map((user) => (user.id === editingUser.id ? updatedUser : user)))
+        await updateUser(editingUser.id, userData)
+        // Reload users to reflect changes
+        await fetchUsers()
       } else {
         // Create new user - this would need to be implemented in backend
         setError('Chức năng tạo người dùng mới chưa được triển khai')
@@ -85,15 +100,6 @@ export default function UsersPage() {
   const roleConfig = {
     ADMIN: { label: "Quản trị viên", color: "bg-red-500/10 text-red-500" },
     CUSTOMER: { label: "Khách hàng", color: "bg-green-500/10 text-green-500" },
-  }
-
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-muted-foreground">Đang tải...</div>
-      </div>
-    )
   }
 
   return (
@@ -125,7 +131,7 @@ export default function UsersPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-card border border-border rounded-lg p-6">
           <p className="text-sm text-muted-foreground">Tổng người dùng</p>
-          <p className="text-2xl font-bold text-foreground mt-2">{users.length}</p>
+          <p className="text-2xl font-bold text-foreground mt-2">{pagination.total || 0}</p>
         </div>
         <div className="bg-card border border-border rounded-lg p-6">
           <p className="text-sm text-muted-foreground">Khách hàng</p>
@@ -148,13 +154,19 @@ export default function UsersPage() {
               type="text"
               placeholder="Tìm kiếm theo tên hoặc email..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                setSearchQuery(e.target.value)
+                setPagination({ ...pagination, page: 1 }) // Reset về trang 1 khi search
+              }}
               className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
           <select
             value={selectedRole}
-            onChange={(e) => setSelectedRole(e.target.value)}
+            onChange={(e) => {
+              setSelectedRole(e.target.value)
+              setPagination({ ...pagination, page: 1 }) // Reset về trang 1 khi đổi role
+            }}
             className="px-4 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
           >
             <option value="all">Tất cả vai trò</option>
@@ -191,7 +203,26 @@ export default function UsersPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {filteredUsers.map((user) => (
+              {loading ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-12 text-center text-muted-foreground">
+                    Đang tải...
+                  </td>
+                </tr>
+              ) : error ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-12 text-center text-red-500">
+                    {error}
+                  </td>
+                </tr>
+              ) : users.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-12 text-center text-muted-foreground">
+                    Không tìm thấy người dùng nào
+                  </td>
+                </tr>
+              ) : (
+                users.map((user) => (
                 <tr key={user.id} className="hover:bg-muted/30 transition-colors">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
@@ -245,14 +276,77 @@ export default function UsersPage() {
                     </div>
                   </td>
                 </tr>
-              ))}
+                ))
+              )}
             </tbody>
           </table>
         </div>
-
-        {filteredUsers.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">Không tìm thấy người dùng nào</p>
+        
+        {/* Pagination */}
+        {!loading && !error && pagination.pages > 1 && (
+          <div className="p-4 border-t border-border">
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    onClick={(e) => {
+                      e.preventDefault()
+                      if (pagination.page > 1) {
+                        setPagination({ ...pagination, page: pagination.page - 1 })
+                      }
+                    }}
+                    className={pagination.page <= 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                  />
+                </PaginationItem>
+                {Array.from({ length: pagination.pages }, (_, i) => i + 1).map((pageNum) => {
+                  // Hiển thị trang đầu, cuối, và các trang xung quanh trang hiện tại
+                  if (
+                    pageNum === 1 ||
+                    pageNum === pagination.pages ||
+                    (pageNum >= pagination.page - 1 && pageNum <= pagination.page + 1)
+                  ) {
+                    return (
+                      <PaginationItem key={pageNum}>
+                        <PaginationLink
+                          onClick={(e) => {
+                            e.preventDefault()
+                            setPagination({ ...pagination, page: pageNum })
+                          }}
+                          isActive={pageNum === pagination.page}
+                          className="cursor-pointer"
+                        >
+                          {pageNum}
+                        </PaginationLink>
+                      </PaginationItem>
+                    )
+                  } else if (
+                    pageNum === pagination.page - 2 ||
+                    pageNum === pagination.page + 2
+                  ) {
+                    return (
+                      <PaginationItem key={pageNum}>
+                        <span className="px-3 py-1">...</span>
+                      </PaginationItem>
+                    )
+                  }
+                  return null
+                })}
+                <PaginationItem>
+                  <PaginationNext
+                    onClick={(e) => {
+                      e.preventDefault()
+                      if (pagination.page < pagination.pages) {
+                        setPagination({ ...pagination, page: pagination.page + 1 })
+                      }
+                    }}
+                    className={pagination.page >= pagination.pages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+            <div className="text-center mt-2 text-sm text-muted-foreground">
+              Trang {pagination.page} / {pagination.pages} ({pagination.total} người dùng)
+            </div>
           </div>
         )}
       </div>

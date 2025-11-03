@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   CurrencyDollarIcon,
   ShoppingBagIcon,
@@ -12,42 +12,84 @@ import RevenueChart from "@/components/admin/RevenueChart"
 import CategoryChart from "@/components/admin/CategoryChart"
 import TopProducts from "@/components/admin/TopProducts"
 import SalesMap from "@/components/admin/SalesMap"
+import { fetchRevenueStatistics } from "@/lib/api"
 
 export default function AnalyticsPage() {
   const [timeRange, setTimeRange] = useState("30days")
+  const [revenueData, setRevenueData] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    
+    const loadRevenueData = async () => {
+      try {
+        setLoading(true)
+        const data = await fetchRevenueStatistics(timeRange)
+        
+        if (!cancelled) {
+          setRevenueData(data)
+        }
+      } catch (err) {
+        if (!cancelled) {
+          console.error("Failed to load revenue data:", err)
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false)
+        }
+      }
+    }
+
+    loadRevenueData()
+    
+    return () => {
+      cancelled = true
+    }
+  }, [timeRange])
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
+      maximumFractionDigits: 0,
+    }).format(amount)
+  }
 
   const stats = [
     {
       name: "Doanh thu",
-      value: "₫124,500,000",
-      change: "+12.5%",
-      trend: "up" as const,
+      value: revenueData ? formatCurrency(revenueData.totals.totalRevenue) : "₫0",
+      change: revenueData?.totals.revenueChange 
+        ? `${parseFloat(revenueData.totals.revenueChange) >= 0 ? "+" : ""}${revenueData.totals.revenueChange}%`
+        : "0%",
+      trend: (revenueData?.totals.revenueChange && parseFloat(revenueData.totals.revenueChange) >= 0) ? "up" as const : "down" as const,
       icon: CurrencyDollarIcon,
-      description: "So với tháng trước",
+      description: "So với kỳ trước",
     },
     {
       name: "Đơn hàng",
-      value: "1,234",
-      change: "+8.2%",
+      value: revenueData ? revenueData.totals.totalOrders.toLocaleString("vi-VN") : "0",
+      change: "",
       trend: "up" as const,
       icon: ShoppingBagIcon,
       description: "Tổng đơn hàng",
     },
     {
-      name: "Khách hàng mới",
-      value: "156",
-      change: "+15.3%",
-      trend: "up" as const,
-      icon: UsersIcon,
-      description: "Trong 30 ngày",
-    },
-    {
-      name: "Tỷ lệ chuyển đổi",
-      value: "3.2%",
-      change: "+0.5%",
+      name: "Giá trị đơn hàng TB",
+      value: revenueData ? formatCurrency(revenueData.totals.averageOrderValue) : "₫0",
+      change: "",
       trend: "up" as const,
       icon: ArrowTrendingUpIcon,
-      description: "Tỷ lệ mua hàng",
+      description: "Trung bình mỗi đơn",
+    },
+    {
+      name: "Khách hàng mới",
+      value: "---",
+      change: "",
+      trend: "up" as const,
+      icon: UsersIcon,
+      description: "Trong khoảng thời gian",
     },
   ]
 
@@ -96,7 +138,7 @@ export default function AnalyticsPage() {
       {/* Charts Row 1 */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
-          <RevenueChart />
+          <RevenueChart period={timeRange} />
         </div>
         <CategoryChart />
       </div>
@@ -116,9 +158,13 @@ export default function AnalyticsPage() {
             </div>
             <h3 className="text-lg font-semibold text-foreground">Giá trị đơn hàng TB</h3>
           </div>
-          <p className="text-3xl font-bold text-foreground">₫1,008,000</p>
+          <p className="text-3xl font-bold text-foreground">
+            {loading ? "..." : revenueData ? formatCurrency(revenueData.totals.averageOrderValue) : "₫0"}
+          </p>
           <p className="text-sm text-muted-foreground mt-2">
-            <span className="text-green-500 font-medium">+5.2%</span> so với tháng trước
+            {revenueData?.totals.totalOrders 
+              ? `Từ ${revenueData.totals.totalOrders} đơn hàng` 
+              : "Chưa có dữ liệu"}
           </p>
         </div>
 
@@ -127,11 +173,15 @@ export default function AnalyticsPage() {
             <div className="w-10 h-10 bg-purple-500/10 rounded-lg flex items-center justify-center">
               <ShoppingBagIcon className="w-5 h-5 text-purple-500" />
             </div>
-            <h3 className="text-lg font-semibold text-foreground">Sản phẩm bán chạy</h3>
+            <h3 className="text-lg font-semibold text-foreground">Tổng đơn hàng</h3>
           </div>
-          <p className="text-3xl font-bold text-foreground">iPhone 15 Pro</p>
+          <p className="text-3xl font-bold text-foreground">
+            {loading ? "..." : revenueData ? revenueData.totals.totalOrders.toLocaleString("vi-VN") : "0"}
+          </p>
           <p className="text-sm text-muted-foreground mt-2">
-            <span className="font-medium">245 sản phẩm</span> đã bán
+            {revenueData?.totals.totalOrders 
+              ? `Trong khoảng thời gian đã chọn` 
+              : "Chưa có dữ liệu"}
           </p>
         </div>
 
@@ -140,11 +190,15 @@ export default function AnalyticsPage() {
             <div className="w-10 h-10 bg-orange-500/10 rounded-lg flex items-center justify-center">
               <UsersIcon className="w-5 h-5 text-orange-500" />
             </div>
-            <h3 className="text-lg font-semibold text-foreground">Khách hàng trung thành</h3>
+            <h3 className="text-lg font-semibold text-foreground">Khách hàng</h3>
           </div>
-          <p className="text-3xl font-bold text-foreground">342</p>
+          <p className="text-3xl font-bold text-foreground">
+            {loading ? "..." : revenueData ? "---" : "0"}
+          </p>
           <p className="text-sm text-muted-foreground mt-2">
-            <span className="font-medium">38.4%</span> tổng khách hàng
+            {revenueData?.totals.totalOrders 
+              ? `${revenueData.totals.totalOrders} đơn hàng đã hoàn thành` 
+              : "Chưa có dữ liệu"}
           </p>
         </div>
       </div>
