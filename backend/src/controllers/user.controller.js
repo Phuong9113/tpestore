@@ -26,7 +26,7 @@ export const getUsers = async (req, res, next) => {
 export const updateProfile = async (req, res, next) => {
 	try {
 		const userId = req.user.id;
-		const { name, phone, address, city } = req.body;
+        const { name, phone, address, city, birthDate, gender } = req.body;
 		const existingUser = await prisma.user.findUnique({ where: { id: userId } });
 		if (!existingUser) {
 			return res.status(404).json({ error: "User not found" });
@@ -38,6 +38,8 @@ export const updateProfile = async (req, res, next) => {
 				...(phone !== undefined && { phone }),
 				...(address !== undefined && { address }),
 				...(city !== undefined && { city }),
+                ...(birthDate !== undefined && { birthDate }),
+                ...(gender !== undefined && { gender }),
 			},
 			select: {
 				id: true,
@@ -46,6 +48,8 @@ export const updateProfile = async (req, res, next) => {
 				phone: true,
 				address: true,
 				city: true,
+                birthDate: true,
+                gender: true,
 				role: true,
 				isActive: true,
 				createdAt: true,
@@ -70,6 +74,8 @@ export const getProfile = async (req, res, next) => {
 				phone: true,
 				address: true,
 				city: true,
+                birthDate: true,
+                gender: true,
 				role: true,
 				isActive: true,
 				createdAt: true,

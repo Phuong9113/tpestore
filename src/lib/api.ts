@@ -153,6 +153,8 @@ export interface AdminUser {
   phone: string | null;
   address: string | null;
   city: string | null;
+  birthDate?: string | null;
+  gender?: string | null;
   role: 'CUSTOMER' | 'ADMIN';
   isActive: boolean;
   createdAt: string;
@@ -611,6 +613,7 @@ export const api = {
   get: async (url: string) => {
     const res = await fetch(`${API_BASE}${url}`, {
       headers: getAuthHeaders(),
+      cache: 'no-store',
     });
     if (!res.ok) throw new Error(`API request failed: ${res.status}`);
     return await res.json();
@@ -621,6 +624,7 @@ export const api = {
       method: 'POST',
       headers: getAuthHeaders(),
       body: data ? JSON.stringify(data) : undefined,
+      cache: 'no-store',
     });
     if (!res.ok) {
       const errorData = await res.json().catch(() => ({}));

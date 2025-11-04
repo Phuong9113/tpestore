@@ -68,6 +68,8 @@ export default function OrdersPage() {
     total: 0,
     pages: 0
   })
+  // GHN latest statuses by order code
+  const [ghnStatuses, setGhnStatuses] = useState<Record<string, string>>({})
 
   // Fetch orders and stats
   useEffect(() => {
@@ -95,6 +97,89 @@ export default function OrdersPage() {
       setLoading(false)
     }
   }
+
+  // Map GHN status to Vietnamese label for display in admin page
+  const mapGhnStatus = (status?: string) => {
+    const map: Record<string, string> = {
+      ready_to_pick: "Sẵn sàng lấy hàng",
+      picking: "Đang lấy hàng",
+      picked: "Đã lấy hàng",
+      storing: "Đang lưu kho",
+      transporting: "Đang vận chuyển",
+      sorting: "Đang phân loại",
+      delivering: "Đang giao hàng",
+      delivered: "Đã giao hàng",
+      delivery_fail: "Giao hàng thất bại",
+      waiting_to_return: "Chờ trả hàng",
+      return: "Đang trả hàng",
+      returned: "Đã trả hàng",
+      exception: "Ngoại lệ",
+      damage: "Hàng hóa bị hỏng",
+      lost: "Hàng hóa bị mất",
+      cancel: "Hủy đơn hàng",
+    }
+    return status ? (map[status] || status) : undefined
+  }
+
+  // Fetch GHN latest status for orders that have a GHN code
+  useEffect(() => {
+    const controller = new AbortController()
+    const run = async () => {
+      try {
+        const codes = Array.from(new Set(orders.map(o => (o.ghnOrderCode || '').trim().toUpperCase()).filter(Boolean))) as string[]
+        if (codes.length === 0) return
+        const statusMap: Record<string, string> = {}
+        await Promise.all(
+          codes.map(async (code) => {
+            try {
+              const res = await api.get(`/shipping/detail/${code}`)
+              const envelope = res?.data ?? res
+              const normalized = envelope?.data ?? envelope
+              const current = normalized?.currentStatus || normalized?.status || null
+              if (code && current) statusMap[code] = mapGhnStatus(current) || current
+            } catch {}
+          })
+        )
+        if (!controller.signal.aborted && Object.keys(statusMap).length) {
+          setGhnStatuses(prev => ({ ...prev, ...statusMap }))
+        }
+      } catch {}
+    }
+    if (!loading && orders.length) run()
+    return () => controller.abort()
+  }, [orders, loading])
+
+  // Simple polling every 45s for in-progress GHN orders
+  useEffect(() => {
+    const terminal = new Set(["delivered","returned","return","cancel"])
+    const codes = Array.from(new Set(orders.map(o => (o.ghnOrderCode || '').trim().toUpperCase()).filter(Boolean))) as string[]
+    if (codes.length === 0) return
+    let timer: any
+    const poll = async () => {
+      try {
+        const statusMap: Record<string, string> = {}
+        await Promise.all(
+          codes.map(async (code) => {
+            try {
+              // Skip terminal ones
+              const currentLabel = ghnStatuses[code]
+              if (currentLabel && (currentLabel.includes('Đã giao') || currentLabel.includes('Đã trả') || currentLabel.includes('Hủy'))) return
+              const res = await api.get(`/shipping/detail/${code}`)
+              const envelope = res?.data ?? res
+              const normalized = envelope?.data ?? envelope
+              const current = normalized?.currentStatus || normalized?.status || null
+              if (code && current) statusMap[code] = mapGhnStatus(current) || current
+            } catch {}
+          })
+        )
+        if (Object.keys(statusMap).length) setGhnStatuses(prev => ({ ...prev, ...statusMap }))
+      } finally {
+        timer = setTimeout(poll, 45000)
+      }
+    }
+    poll()
+    return () => { if (timer) clearTimeout(timer) }
+  }, [orders, ghnStatuses])
 
   const fetchStats = async () => {
     try {
@@ -315,17 +400,28 @@ export default function OrdersPage() {
                       <span className="text-sm font-medium text-foreground">{order.totalPrice.toLocaleString("vi-VN")}₫</span>
                     </td>
                     <td className="px-6 py-4">
-                      <select
-                        value={order.status}
-                        onChange={(e) => handleUpdateStatus(order.id, e.target.value)}
-                        className={`px-2.5 py-1 rounded-full text-xs font-medium border-0 focus:outline-none focus:ring-2 focus:ring-primary ${statusConfig[order.status as keyof typeof statusConfig]?.color || 'bg-gray-500/10 text-gray-500'}`}
-                      >
-                        <option value="PENDING">Chờ xử lý</option>
-                        <option value="PROCESSING">Đang xử lý</option>
-                        <option value="SHIPPING">Đang giao</option>
-                        <option value="COMPLETED">Hoàn thành</option>
-                        <option value="CANCELLED">Đã hủy</option>
-                      </select>
+                      <div className="flex flex-col gap-1">
+                        <select
+                          value={order.status}
+                          onChange={(e) => handleUpdateStatus(order.id, e.target.value)}
+                          className={`px-2.5 py-1 rounded-full text-xs font-medium border-0 focus:outline-none focus:ring-2 focus:ring-primary ${statusConfig[order.status as keyof typeof statusConfig]?.color || 'bg-gray-500/10 text-gray-500'}`}
+                        >
+                          <option value="PENDING">Chờ xử lý</option>
+                          <option value="PROCESSING">Đang xử lý</option>
+                          <option value="SHIPPING">Đang giao</option>
+                          <option value="COMPLETED">Hoàn thành</option>
+                          <option value="CANCELLED">Đã hủy</option>
+                        </select>
+                        {order.ghnOrderCode && (
+                          <span className="text-[11px] text-muted-foreground">
+                            GHN: {(() => {
+                              const code = (order.ghnOrderCode || '').trim().toUpperCase();
+                              const label = ghnStatuses[code];
+                              return label || 'Đang tải...';
+                            })()}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4">
                       <span

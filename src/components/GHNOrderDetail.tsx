@@ -13,6 +13,7 @@ interface GHNOrderDetailProps {
 interface GHNOrderData {
   order_code: string
   status: string
+  currentStatus?: string
   to_name: string
   to_phone: string
   to_address: string
@@ -33,6 +34,7 @@ interface GHNOrderData {
   required_note: string
   note?: string
   content?: string
+  log?: Array<{ status: string; payment_type_id?: string | number; updated_date: string }>
 }
 
 export default function GHNOrderDetail({ orderCode, isOpen, onClose }: GHNOrderDetailProps) {
@@ -80,7 +82,7 @@ export default function GHNOrderDetail({ orderCode, isOpen, onClose }: GHNOrderD
       'sorting': 'Đang phân loại',
       'delivering': 'Đang giao hàng',
       'delivered': 'Đã giao hàng',
-      'delivery_failed': 'Giao hàng thất bại',
+      'delivery_fail': 'Giao hàng thất bại',
       'waiting_to_return': 'Chờ trả hàng',
       'return': 'Đang trả hàng',
       'returned': 'Đã trả hàng',
@@ -127,7 +129,7 @@ export default function GHNOrderDetail({ orderCode, isOpen, onClose }: GHNOrderD
                 <div>
                   <p className="text-sm text-muted-foreground">Trạng thái</p>
                   <span className="inline-block mt-2 px-3 py-1.5 rounded-full text-sm font-medium bg-blue-500/10 text-blue-500">
-                    {getStatusText(orderData.status)}
+                    {getStatusText((orderData.currentStatus || orderData.status) as string)}
                   </span>
                 </div>
                 <div className="text-right">

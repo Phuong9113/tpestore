@@ -38,13 +38,14 @@ import {
 import { toast } from "sonner"
 import Image from "next/image"
 import ProtectedRoute from "@/components/ProtectedRoute"
+import { resolveStatusLabel } from "@/lib/shipping-status"
 
 interface UserProfile {
   name: string
   email: string
   phone: string
-  address: string
-  city: string
+  birthDate?: string
+  gender?: 'Nam' | 'Nữ' | 'Khác'
 }
 
 interface Order {
@@ -58,13 +59,6 @@ interface Order {
 
 // Address interface is now imported from api.ts
 
-interface PaymentMethod {
-  id: string
-  type: "card" | "bank"
-  name: string
-  number: string
-  isDefault: boolean
-}
 
 interface OrderItem {
   id: string
@@ -99,7 +93,7 @@ interface OrderDetail {
   }[]
 }
 
-type TabType = "profile" | "orders" | "addresses" | "payment"
+type TabType = "profile" | "orders" | "addresses"
 
 // GHN location types (same as checkout)
 interface Province { ProvinceID: number; ProvinceName: string }
@@ -115,8 +109,8 @@ function ProfilePageContent() {
     name: "",
     email: "",
     phone: "",
-    address: "",
-    city: "",
+    birthDate: "",
+    gender: undefined,
   })
 
   useEffect(() => {
@@ -132,8 +126,8 @@ function ProfilePageContent() {
           name: userData.name || "",
           email: userData.email || "",
           phone: userData.phone || "",
-          address: userData.address || "",
-          city: userData.city || "",
+          birthDate: (userData.birthDate as string) || "",
+          gender: (userData.gender as any) || undefined,
         })
       } catch (error) {
         console.error('Error fetching profile:', error)
@@ -154,10 +148,28 @@ function ProfilePageContent() {
 
   const [editedProfile, setEditedProfile] = useState<UserProfile>(profile)
 
+  // When entering edit mode, preload current profile values so user doesn't need to retype unchanged fields
+  useEffect(() => {
+    if (isEditing) {
+      setEditedProfile(profile)
+    }
+  }, [isEditing, profile])
+
   // Real order history from API
   const [orders, setOrders] = useState<Order[]>([])
+  // Map GHN order code -> latest GHN status string
+  const [ghnStatuses, setGhnStatuses] = useState<Record<string, string>>({})
+  // Map GHN order code -> raw GHN logs (array)
+  const [ghnLogs, setGhnLogs] = useState<Record<string, Array<{ status: string; updated_date: string }>>>({})
+  // Map GHN order code -> last normalized payload snapshot (for debugging)
+  const [ghnDebug, setGhnDebug] = useState<Record<string, { currentStatus?: string; status?: string; logs?: number }>>({})
   const [addresses, setAddresses] = useState<AddressType[]>([])
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([])
+  // Pagination for addresses
+  const [addressesPage, setAddressesPage] = useState(1)
+  const ADDRESSES_PAGE_SIZE = 4
+  // Pagination for orders
+  const [ordersPage, setOrdersPage] = useState(1)
+  const ORDERS_PAGE_SIZE = 3
 
   // Fetch orders from API
   useEffect(() => {
@@ -192,6 +204,154 @@ function ProfilePageContent() {
       fetchOrders()
     }
   }, [loading])
+
+  // Fetch GHN statuses for orders that have ghnOrderCode
+  useEffect(() => {
+    const controller = new AbortController()
+    const fetchStatuses = async () => {
+      try {
+        const codes = Array.from(new Set(orders.map(o => (o.ghnOrderCode || "").trim().toUpperCase()).filter(Boolean))) as string[]
+        if (codes.length === 0) return
+        const statusMap: Record<string, string> = {}
+        const logsMap: Record<string, Array<{ status: string; updated_date: string }>> = {}
+
+        const toText = (status: string) => {
+          const map: Record<string, string> = {
+            ready_to_pick: "Sẵn sàng lấy hàng",
+            picking: "Đang lấy hàng",
+            picked: "Đã lấy hàng",
+            storing: "Đang lưu kho",
+            transporting: "Đang vận chuyển",
+            sorting: "Đang phân loại",
+            delivering: "Đang giao hàng",
+            delivered: "Đã giao hàng",
+            delivery_fail: "Giao hàng thất bại",
+            waiting_to_return: "Chờ trả hàng",
+            return: "Đang trả hàng",
+            returned: "Đã trả hàng",
+            exception: "Ngoại lệ",
+            damage: "Hàng hóa bị hỏng",
+            lost: "Hàng hóa bị mất",
+            cancel: "Hủy đơn hàng",
+          }
+          return map[status] || status
+        }
+
+        await Promise.all(
+          codes.map(async (code) => {
+            try {
+              const res = await api.get(`/shipping/detail/${code}`)
+              // success helper wraps as { success, message, data }
+              const envelope = res?.data ?? res
+              const normalized = envelope?.data ?? envelope
+              const current = normalized?.currentStatus || normalized?.status || null
+              if (code && current) {
+                statusMap[code] = toText(current)
+              }
+              const logsArr = Array.isArray(normalized?.log) ? normalized.log : []
+              if (code && logsArr.length) {
+                const sorted = logsArr
+                  .slice()
+                  .sort((a: any, b: any) => new Date(b.updated_date).getTime() - new Date(a.updated_date).getTime())
+                logsMap[code] = sorted.map((l: any) => ({ status: l.status, updated_date: l.updated_date }))
+              }
+              // store debug snapshot
+              setGhnDebug((prev) => ({ ...prev, [code]: { currentStatus: normalized?.currentStatus, status: normalized?.status, logs: logsArr.length } }))
+            } catch (e) {
+              // ignore errors per-order to keep UI resilient
+            }
+          })
+        )
+        if (!controller.signal.aborted && Object.keys(statusMap).length > 0) {
+          setGhnStatuses((prev) => ({ ...prev, ...statusMap }))
+        }
+        if (!controller.signal.aborted && Object.keys(logsMap).length > 0) {
+          setGhnLogs((prev) => ({ ...prev, ...logsMap }))
+        }
+      } catch {}
+    }
+    fetchStatuses()
+    return () => controller.abort()
+  }, [orders])
+
+  // Poll GHN statuses periodically until terminal states
+  useEffect(() => {
+    const terminal = new Set(["delivered", "returned", "return", "cancel"]) // GHN terminal
+    const codes = Array.from(new Set(orders.map(o => (o.ghnOrderCode || "").trim().toUpperCase()).filter(Boolean))) as string[]
+    if (codes.length === 0) return
+
+    let timer: any
+    let aborted = false
+
+    const poll = async () => {
+      try {
+        // If all codes are terminal in current map, stop polling
+        const allTerminal = codes.every((code) => {
+          const label = ghnStatuses[code]
+          // convert back to key by a minimal reverse map (best-effort): if already delivered/returned/return/hủy → stop
+          return label === "Đã giao hàng" || label === "Đã trả hàng" || label === "Hủy đơn hàng"
+        })
+        if (allTerminal) return
+
+        const statusMap: Record<string, string> = {}
+        const logsMap: Record<string, Array<{ status: string; updated_date: string }>> = {}
+        const toText = (status: string) => {
+          const map: Record<string, string> = {
+            ready_to_pick: "Sẵn sàng lấy hàng",
+            picking: "Đang lấy hàng",
+            picked: "Đã lấy hàng",
+            storing: "Đang lưu kho",
+            transporting: "Đang vận chuyển",
+            sorting: "Đang phân loại",
+            delivering: "Đang giao hàng",
+            delivered: "Đã giao hàng",
+            delivery_fail: "Giao hàng thất bại",
+            waiting_to_return: "Chờ trả hàng",
+            return: "Đang trả hàng",
+            returned: "Đã trả hàng",
+            exception: "Ngoại lệ",
+            damage: "Hàng hóa bị hỏng",
+            lost: "Hàng hóa bị mất",
+            cancel: "Hủy đơn hàng",
+          }
+          return map[status] || status
+        }
+
+        await Promise.all(
+          codes.map(async (code) => {
+            try {
+              const res = await api.get(`/shipping/detail/${code}`)
+              const envelope = res?.data ?? res
+              const normalized = envelope?.data ?? envelope
+              const current = normalized?.currentStatus || normalized?.status || null
+              if (code && current) statusMap[code] = toText(current)
+              const logsArr = Array.isArray(normalized?.log) ? normalized.log : []
+              if (code && logsArr.length) {
+                const sorted = logsArr
+                  .slice()
+                  .sort((a: any, b: any) => new Date(b.updated_date).getTime() - new Date(a.updated_date).getTime())
+                logsMap[code] = sorted.map((l: any) => ({ status: l.status, updated_date: l.updated_date }))
+              }
+              setGhnDebug((prev) => ({ ...prev, [code]: { currentStatus: normalized?.currentStatus, status: normalized?.status, logs: logsArr.length } }))
+            } catch {}
+          })
+        )
+        if (!aborted && Object.keys(statusMap).length > 0) {
+          setGhnStatuses((prev) => ({ ...prev, ...statusMap }))
+        }
+        if (!aborted && Object.keys(logsMap).length > 0) {
+          setGhnLogs((prev) => ({ ...prev, ...logsMap }))
+        }
+      } finally {
+        if (!aborted) timer = setTimeout(poll, 45000)
+      }
+    }
+    poll()
+    return () => {
+      aborted = true
+      if (timer) clearTimeout(timer)
+    }
+  }, [orders, ghnStatuses])
 
   // Fetch addresses from API
   useEffect(() => {
@@ -412,7 +572,7 @@ function ProfilePageContent() {
       const updatedAt = od?.updatedAt ? new Date(od.updatedAt) : null
       const updatedAtStr = updatedAt && !isNaN(updatedAt.getTime()) ? updatedAt.toLocaleString('vi-VN') : ''
       
-      const orderDetail: OrderDetail = {
+      let orderDetail: OrderDetail = {
         id: od.id,
         date: createdDateStr,
         status: od.status === 'PENDING' ? 'Đang xử lý' : 
@@ -435,7 +595,7 @@ function ProfilePageContent() {
         shippingAddress: {
           name: od.shippingName || profile.name || "Chưa có tên",
           phone: od.shippingPhone || profile.phone || "Chưa có SĐT",
-          address: od.shippingAddress || profile.address || "Chưa có địa chỉ",
+          address: od.shippingAddress || "Chưa có địa chỉ",
           province: od.shippingProvince,
           district: od.shippingDistrict,
           ward: od.shippingWard,
@@ -443,12 +603,74 @@ function ProfilePageContent() {
         paymentMethod: od.paymentMethod === 'COD' ? 'Thanh toán khi nhận hàng' : 
                        od.paymentMethod === 'PAYPAL' ? 'PayPal' : 'Thanh toán khi nhận hàng',
         ghnOrderCode: od.ghnOrderCode,
-        timeline: [
+        timeline: [],
+      }
+
+      // If GHN code exists, fetch GHN detail to build accurate timeline from logs
+      const codeUpper = (od.ghnOrderCode || "").trim().toUpperCase()
+      if (codeUpper) {
+        try {
+          const res = await api.get(`/shipping/detail/${codeUpper}`)
+          const envelope = res?.data ?? res
+          const normalized = envelope?.data ?? envelope
+          const logsArr = Array.isArray(normalized?.log) ? normalized.log : []
+          const latestTs = (() => {
+            if (logsArr.length) {
+              const latest = logsArr
+                .slice()
+                .sort((a: any, b: any) => new Date(b.updated_date).getTime() - new Date(a.updated_date).getTime())[0]
+              return latest?.updated_date
+            }
+            return normalized?.latestLog?.updated_date || normalized?.updated_date || normalized?.created_date || null
+          })()
+
+          // Always base label on DB status, but use timestamp from GHN if available
+          const dbLabel = od.status === 'PENDING' ? 'Đang xử lý' : 
+                          od.status === 'PROCESSING' ? 'Đang xử lý' :
+                          od.status === 'PAID' ? 'Đã thanh toán' :
+                          od.status === 'SHIPPING' ? 'Đang giao' :
+                          od.status === 'SHIPPED' ? 'Đang giao' :
+                          od.status === 'COMPLETED' ? 'Đã giao' :
+                          od.status === 'CANCELLED' ? 'Đã hủy' : 'Đang xử lý'
+
+          orderDetail.timeline = [
+            {
+              status: dbLabel,
+              date: latestTs ? new Date(latestTs).toLocaleString('vi-VN') : (updatedAtStr || new Date().toLocaleString('vi-VN')),
+              description: "Cập nhật trạng thái đơn hàng",
+            },
+            {
+              status: "Đã đặt",
+              date: createdAt && !isNaN(createdAt.getTime()) ? createdAt.toLocaleString('vi-VN') : '',
+              description: "Đơn hàng đã được đặt thành công",
+            },
+          ]
+        } catch {}
+
+        // Fallback: if fetch failed, still show DB status with last updatedAt
+        if (!orderDetail.timeline.length) {
+          const dbLabel = od.status === 'PENDING' ? 'Đang xử lý' : 
+                          od.status === 'PROCESSING' ? 'Đang xử lý' :
+                          od.status === 'PAID' ? 'Đã thanh toán' :
+                          od.status === 'SHIPPING' ? 'Đang giao' :
+                          od.status === 'SHIPPED' ? 'Đang giao' :
+                          od.status === 'COMPLETED' ? 'Đã giao' :
+                          od.status === 'CANCELLED' ? 'Đã hủy' : 'Đang xử lý'
+          orderDetail.timeline = [
+            { status: dbLabel, date: updatedAtStr, description: "Cập nhật trạng thái đơn hàng" },
+            { status: "Đã đặt", date: createdAt && !isNaN(createdAt.getTime()) ? createdAt.toLocaleString('vi-VN') : '', description: "Đơn hàng đã được đặt thành công" },
+          ]
+        }
+      }
+
+      // Fallback timeline if GHN logs not available
+      if (!orderDetail.timeline.length) {
+        orderDetail.timeline = [
           { 
             status: od.status === 'PENDING' ? 'Đang xử lý' : 
                     od.status === 'PAID' ? 'Đã thanh toán' :
                     od.status === 'SHIPPED' ? 'Đang giao' :
-                    od.status === 'COMPLETED' ? 'Đã giao' : 'Đã hủy', 
+                    od.status === 'COMPLETED' ? 'Đã giao' : (codeUpper ? 'Đang cập nhật từ GHN' : 'Đã hủy'), 
             date: updatedAtStr, 
             description: "Cập nhật trạng thái đơn hàng" 
           },
@@ -457,9 +679,9 @@ function ProfilePageContent() {
             date: createdAt && !isNaN(createdAt.getTime()) ? createdAt.toLocaleString('vi-VN') : '', 
             description: "Đơn hàng đã được đặt thành công" 
           },
-        ],
+        ]
       }
-      
+
       setSelectedOrder(orderDetail)
     } catch (error) {
       console.error('Error fetching order details:', error)
@@ -468,6 +690,70 @@ function ProfilePageContent() {
 
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState("")
+
+  // Helpers for date formatting
+  const toDateInputValue = (val?: string) => {
+    const v = (val || "").trim()
+    if (!v) return ""
+    // If already yyyy-mm-dd
+    if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v
+    // If dd/mm/yyyy -> convert to yyyy-mm-dd
+    const m = v.match(/^(\d{2})\/(\d{2})\/(\d{4})$/)
+    if (m) return `${m[3]}-${m[2]}-${m[1]}`
+    // Fallback: try Date parse
+    const d = new Date(v)
+    if (!isNaN(d.getTime())) {
+      const yyyy = d.getFullYear()
+      const mm = String(d.getMonth() + 1).padStart(2, '0')
+      const dd = String(d.getDate()).padStart(2, '0')
+      return `${yyyy}-${mm}-${dd}`
+    }
+    return ""
+  }
+
+  const refreshGHNStatus = async (code?: string | null) => {
+    try {
+      const c = (code || "").trim().toUpperCase()
+      if (!c) return
+      const res = await api.get(`/shipping/detail/${c}`)
+      const envelope = res?.data ?? res
+      const normalized = envelope?.data ?? envelope
+      const toText = (status: string) => {
+        const map: Record<string, string> = {
+          ready_to_pick: "Sẵn sàng lấy hàng",
+          picking: "Đang lấy hàng",
+          picked: "Đã lấy hàng",
+          storing: "Đang lưu kho",
+          transporting: "Đang vận chuyển",
+          sorting: "Đang phân loại",
+          delivering: "Đang giao hàng",
+          delivered: "Đã giao hàng",
+          delivery_fail: "Giao hàng thất bại",
+          waiting_to_return: "Chờ trả hàng",
+          return: "Đang trả hàng",
+          returned: "Đã trả hàng",
+          exception: "Ngoại lệ",
+          damage: "Hàng hóa bị hỏng",
+          lost: "Hàng hóa bị mất",
+          cancel: "Hủy đơn hàng",
+        }
+        return map[status] || status
+      }
+      const current = normalized?.currentStatus || normalized?.status || null
+      if (current) setGhnStatuses((prev) => ({ ...prev, [c]: toText(current) }))
+      const logsArr = Array.isArray(normalized?.log) ? normalized.log : []
+      if (logsArr.length) {
+        const sorted = logsArr
+          .slice()
+          .sort((a: any, b: any) => new Date(b.updated_date).getTime() - new Date(a.updated_date).getTime())
+        setGhnLogs((prev) => ({ ...prev, [c]: sorted.map((l: any) => ({ status: l.status, updated_date: l.updated_date })) }))
+      }
+      // snapshot for debug
+      setGhnDebug((prev) => ({ ...prev, [c]: { currentStatus: normalized?.currentStatus, status: normalized?.status, logs: logsArr.length } }))
+    } catch (e) {
+      console.error('[GHN][UI] refresh error', code, e)
+    }
+  }
 
   const handleSave = async () => {
     try {
@@ -478,16 +764,23 @@ function ProfilePageContent() {
       const updatedUser = await updateUserProfile({
         name: editedProfile.name,
         phone: editedProfile.phone,
-        address: editedProfile.address,
-        city: editedProfile.city,
+        birthDate: editedProfile.birthDate,
+        gender: editedProfile.gender,
       })
-      
+      const u = (updatedUser as any)?.data ?? updatedUser
       setProfile({
-        name: updatedUser.name || "",
-        email: updatedUser.email || "",
-        phone: updatedUser.phone || "",
-        address: updatedUser.address || "",
-        city: updatedUser.city || "",
+        name: u?.name || "",
+        email: u?.email || "",
+        phone: u?.phone || "",
+        birthDate: (u as any)?.birthDate || editedProfile.birthDate || "",
+        gender: (u as any)?.gender || editedProfile.gender,
+      })
+      setEditedProfile({
+        name: u?.name || "",
+        email: u?.email || profile.email || "",
+        phone: u?.phone || "",
+        birthDate: (u as any)?.birthDate || editedProfile.birthDate || "",
+        gender: (u as any)?.gender || editedProfile.gender,
       })
       setIsEditing(false)
     } catch (e) {
@@ -531,11 +824,12 @@ function ProfilePageContent() {
     }
   }
 
-  const getStatusColor = (status: Order["status"]) => {
+  const getStatusColor = (status: string) => {
     switch (status) {
       case "Đã giao":
         return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
       case "Đang giao":
+      case "Đang giao hàng":
         return "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
       case "Đang xử lý":
         return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
@@ -572,15 +866,42 @@ function ProfilePageContent() {
             </div>
 
             <div className="p-6 space-y-6">
-              {/* Order Status */}
+              {/* Order Status (prefer GHN status if available) */}
               <div className="bg-secondary/50 rounded-lg p-4">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium text-foreground">Trạng thái đơn hàng</span>
-                  <span
-                    className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(selectedOrder.status)}`}
-                  >
-                    {selectedOrder.status}
-                  </span>
+                  {(() => {
+                    const codeUpper = (selectedOrder.ghnOrderCode || "").trim().toUpperCase();
+                    const snap = codeUpper ? ghnDebug[codeUpper] : undefined as any;
+                    const labelFromSnap = snap?.currentStatus ? (() => {
+                      const map: Record<string, string> = {
+                        ready_to_pick: "Sẵn sàng lấy hàng",
+                        picking: "Đang lấy hàng",
+                        picked: "Đã lấy hàng",
+                        storing: "Đang lưu kho",
+                        transporting: "Đang vận chuyển",
+                        sorting: "Đang phân loại",
+                        delivering: "Đang giao hàng",
+                        delivered: "Đã giao hàng",
+                        delivery_fail: "Giao hàng thất bại",
+                        waiting_to_return: "Chờ trả hàng",
+                        return: "Đang trả hàng",
+                        returned: "Đã trả hàng",
+                        exception: "Ngoại lệ",
+                        damage: "Hàng hóa bị hỏng",
+                        lost: "Hàng hóa bị mất",
+                        cancel: "Hủy đơn hàng",
+                      }
+                      return map[snap.currentStatus as string] || snap.currentStatus
+                    })() : undefined
+                    const labelFromState = codeUpper && ghnStatuses[codeUpper] ? ghnStatuses[codeUpper] : undefined
+                    const displayStatus = labelFromSnap || labelFromState || selectedOrder.status
+                    return (
+                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(displayStatus)}`}>
+                        {displayStatus}
+                      </span>
+                    )
+                  })()}
                 </div>
               </div>
 
@@ -771,17 +1092,7 @@ function ProfilePageContent() {
                   <MapPinIcon className="w-5 h-5" />
                   Địa chỉ giao hàng
                 </button>
-                <button
-                  onClick={() => setActiveTab("payment")}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-colors ${
-                    activeTab === "payment"
-                      ? "bg-primary text-primary-foreground"
-                      : "hover:bg-secondary text-foreground"
-                  }`}
-                >
-                  <CreditCardIcon className="w-5 h-5" />
-                  Phương thức thanh toán
-                </button>
+                {/* Payment tab removed */}
                 
                 {/* Admin Dashboard Link - Only show for ADMIN role */}
                 {authUser?.role === "ADMIN" && (
@@ -802,7 +1113,7 @@ function ProfilePageContent() {
             {activeTab === "profile" && (
               <div className="bg-card rounded-lg border border-border p-6">
                 <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-xl font-bold text-foreground">Thông tin cá nhân</h3>
+                  <h3 className="text-xl font-bold text-foreground">Thông tin tài khoản</h3>
                   {!isEditing ? (
                     <button
                       onClick={() => setIsEditing(true)}
@@ -850,7 +1161,7 @@ function ProfilePageContent() {
                     <label className="block text-sm font-medium text-foreground mb-2">Email</label>
                     <input
                       type="email"
-                      value={isEditing ? editedProfile.email : profile.email}
+                      value={profile.email}
                       disabled={true}
                       className="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-60 text-foreground"
                     />
@@ -868,27 +1179,35 @@ function ProfilePageContent() {
                     />
                   </div>
 
-
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-foreground mb-2">Địa chỉ</label>
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-2">Ngày sinh</label>
                     <input
-                      type="text"
-                      value={isEditing ? editedProfile.address : profile.address}
-                      onChange={(e) => setEditedProfile({ ...editedProfile, address: e.target.value })}
+                      type="date"
+                      value={isEditing ? toDateInputValue(editedProfile.birthDate) : toDateInputValue(profile.birthDate)}
+                      onChange={(e) => setEditedProfile({ ...editedProfile, birthDate: e.target.value })}
                       disabled={!isEditing}
                       className="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-60 text-foreground"
                     />
                   </div>
 
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-foreground mb-2">Thành phố</label>
-                    <input
-                      type="text"
-                      value={isEditing ? editedProfile.city : profile.city}
-                      onChange={(e) => setEditedProfile({ ...editedProfile, city: e.target.value })}
-                      disabled={!isEditing}
-                      className="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-60 text-foreground"
-                    />
+                    <label className="block text-sm font-medium text-foreground mb-2">Giới tính</label>
+                    <div className="flex items-center gap-6">
+                      {(["Nam", "Nữ", "Khác"] as const).map((g) => (
+                        <label key={`gender-${g}`} className="flex items-center gap-2 text-foreground">
+                          <input
+                            type="radio"
+                            name="gender"
+                            value={g}
+                            checked={(isEditing ? editedProfile.gender : profile.gender) === g}
+                            onChange={() => isEditing && setEditedProfile({ ...editedProfile, gender: g })}
+                            disabled={!isEditing}
+                            className="h-4 w-4"
+                          />
+                          <span className="text-sm">{g}</span>
+                        </label>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -898,8 +1217,17 @@ function ProfilePageContent() {
               <div className="bg-card rounded-lg border border-border p-6">
                 <h3 className="text-xl font-bold text-foreground mb-6">Lịch sử đơn hàng</h3>
 
+                {/* Phân trang danh sách đơn hàng */}
+                {(() => {
+                  const totalPages = Math.max(1, Math.ceil(orders.length / ORDERS_PAGE_SIZE))
+                  const currentPage = Math.min(ordersPage, totalPages)
+                  const start = (currentPage - 1) * ORDERS_PAGE_SIZE
+                  const end = start + ORDERS_PAGE_SIZE
+                  const pageOrders = orders.slice(start, end)
+                  return (
+                    <>
                 <div className="space-y-4">
-                  {orders.map((order) => (
+                  {pageOrders.map((order) => (
                     <div
                       key={order.id}
                       className="border border-border rounded-lg p-4 hover:bg-secondary/50 transition-colors"
@@ -911,9 +1239,38 @@ function ProfilePageContent() {
                           </p>
                           <p className="text-sm text-muted-foreground">{order.date}</p>
                         </div>
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
-                          {order.status}
-                        </span>
+                        {(() => {
+                          const codeUpper = (order.ghnOrderCode || "").trim().toUpperCase()
+                          const snap = ghnDebug[codeUpper]
+                          const labelFromSnap = snap?.currentStatus ? (() => {
+                            const map: Record<string, string> = {
+                              ready_to_pick: "Sẵn sàng lấy hàng",
+                              picking: "Đang lấy hàng",
+                              picked: "Đã lấy hàng",
+                              storing: "Đang lưu kho",
+                              transporting: "Đang vận chuyển",
+                              sorting: "Đang phân loại",
+                              delivering: "Đang giao hàng",
+                              delivered: "Đã giao hàng",
+                              delivery_fail: "Giao hàng thất bại",
+                              waiting_to_return: "Chờ trả hàng",
+                              return: "Đang trả hàng",
+                              returned: "Đã trả hàng",
+                              exception: "Ngoại lệ",
+                              damage: "Hàng hóa bị hỏng",
+                              lost: "Hàng hóa bị mất",
+                              cancel: "Hủy đơn hàng",
+                            }
+                            return map[snap.currentStatus as string] || snap.currentStatus
+                          })() : undefined
+                          const labelFromState = codeUpper && ghnStatuses[codeUpper] ? ghnStatuses[codeUpper] : undefined
+                          const displayStatus = labelFromSnap || labelFromState || order.status
+                          return (
+                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(displayStatus)}`}>
+                              {displayStatus}
+                            </span>
+                          )
+                        })()}
                       </div>
 
                       <div className="flex items-center justify-between">
@@ -927,6 +1284,7 @@ function ProfilePageContent() {
                             >
                               Xem chi tiết
                             </button>
+                            {/* Removed manual GHN refresh button; statuses auto-sync from GHN */}
                             {(order.status === 'Đang xử lý') && (
                               <button
                                 onClick={() => handleCancelOrder(order.id)}
@@ -938,9 +1296,33 @@ function ProfilePageContent() {
                           </div>
                         </div>
                       </div>
+
+                      {/* Hidden GHN logs and debug info in order history UI */}
                     </div>
                   ))}
                 </div>
+                <div className="flex items-center justify-between mt-4">
+                  <button
+                    onClick={() => setOrdersPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className={`px-3 py-1 rounded border border-border text-sm ${currentPage === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-secondary'}`}
+                  >
+                    Trang trước
+                  </button>
+                  <div className="text-sm text-muted-foreground">
+                    Trang <span className="font-medium text-foreground">{currentPage}</span> / {totalPages}
+                  </div>
+                  <button
+                    onClick={() => setOrdersPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    className={`px-3 py-1 rounded border border-border text-sm ${currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : 'hover:bg-secondary'}`}
+                  >
+                    Trang sau
+                  </button>
+                </div>
+                    </>
+                  )
+                })()}
               </div>
             )}
 
@@ -1121,9 +1503,16 @@ function ProfilePageContent() {
                   </p>
                 </div>
 
-                {addresses.length > 0 ? (
+                {addresses.length > 0 ? (() => {
+                  const totalPages = Math.max(1, Math.ceil(addresses.length / ADDRESSES_PAGE_SIZE))
+                  const currentPage = Math.min(addressesPage, totalPages)
+                  const start = (currentPage - 1) * ADDRESSES_PAGE_SIZE
+                  const end = start + ADDRESSES_PAGE_SIZE
+                  const pageAddresses = addresses.slice(start, end)
+                  return (
+                  <>
                   <div className="space-y-4">
-                    {addresses.map((address) => (
+                    {pageAddresses.map((address) => (
                       <div key={address.id} className="border border-border rounded-lg p-4">
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
@@ -1180,7 +1569,28 @@ function ProfilePageContent() {
                       </div>
                     ))}
                   </div>
-                ) : (
+                  <div className="flex items-center justify-between mt-4">
+                    <button
+                      onClick={() => setAddressesPage((p) => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                      className={`px-3 py-1 rounded border border-border text-sm ${currentPage === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-secondary'}`}
+                    >
+                      Trang trước
+                    </button>
+                    <div className="text-sm text-muted-foreground">
+                      Trang <span className="font-medium text-foreground">{currentPage}</span> / {totalPages}
+                    </div>
+                    <button
+                      onClick={() => setAddressesPage((p) => Math.min(totalPages, p + 1))}
+                      disabled={currentPage === totalPages}
+                      className={`px-3 py-1 rounded border border-border text-sm ${currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : 'hover:bg-secondary'}`}
+                    >
+                      Trang sau
+                    </button>
+                  </div>
+                  </>
+                  )
+                })() : (
                   <div className="text-center py-12">
                     <MapPinIcon className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                     <p className="text-muted-foreground mb-4">Chưa có địa chỉ giao hàng</p>
@@ -1190,23 +1600,7 @@ function ProfilePageContent() {
               </div>
             )}
 
-            {activeTab === "payment" && (
-              <div className="bg-card rounded-lg border border-border p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-xl font-bold text-foreground">Phương thức thanh toán</h3>
-                  <button className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors">
-                    <PlusIcon className="w-4 h-4" />
-                    Thêm thẻ
-                  </button>
-                </div>
-
-                <div className="text-center py-12">
-                  <CreditCardIcon className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground mb-4">Chưa có phương thức thanh toán</p>
-                  <p className="text-sm text-muted-foreground">Tính năng này sẽ được triển khai trong phiên bản tiếp theo</p>
-                </div>
-              </div>
-            )}
+            {/* Payment tab content removed */}
           </div>
         </div>
       </div>

@@ -917,10 +917,32 @@ export const getGHNOrderDetail = async (req, res, next) => {
 	try {
 		const { orderCode } = req.params;
 		if (!orderCode) return res.status(400).json({ error: "Order code is required" });
-		const ghnDetail = await ghnService.getOrderDetail(orderCode);
-		res.json({ success: true, data: ghnDetail });
+        const raw = await ghnService.getOrderDetail(orderCode);
+        // GHN responses are usually { code, message, data } and data can be an array
+        const payload = raw?.data !== undefined ? raw.data : raw;
+        const record = Array.isArray(payload) ? payload[0] : payload;
+
+        // Normalize logs and compute latest status by updated_date
+        const logs = Array.isArray(record?.log) ? record.log : [];
+        const latestLog = logs
+            .slice()
+            .sort((a, b) => new Date(b.updated_date).getTime() - new Date(a.updated_date).getTime())[0];
+        const currentStatus = latestLog?.status || record?.status || null;
+
+        return res.json({
+            success: true,
+            data: {
+                ...record,
+                currentStatus,
+                latestLog,
+                logsCount: logs.length,
+            },
+        });
 	} catch (err) {
-		return res.status(500).json({ error: "Không thể lấy chi tiết đơn hàng GHN", details: err.message });
+        const msg = err?.message || "";
+        const unauthorized = /HTTP\s*401/i.test(msg);
+        const status = unauthorized ? 401 : 502;
+        return res.status(status).json({ error: unauthorized ? "GHN token invalid" : "GHN API error", message: msg });
 	}
 };
 

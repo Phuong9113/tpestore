@@ -31,7 +31,9 @@ export default function ChatBox({ onClose }: ChatBoxProps): JSX.Element {
   const [messages, setMessages] = useState<ChatMessage[]>([GREETING]);
   const [input, setInput] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
+  const [inputKey, setInputKey] = useState<number>(0); // Key để force re-render textarea
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLTextAreaElement | null>(null);
 
   // Auto scroll to bottom when messages change
   useEffect(() => {
@@ -45,7 +47,13 @@ export default function ChatBox({ onClose }: ChatBoxProps): JSX.Element {
   const sendMessage = useCallback(async () => {
     if (!canSend) return;
     const userText = input.trim();
-    setInput("");
+    if (!userText) return;
+    
+    const userMsg: ChatMessage = { role: "user", content: userText };
+    // Thêm câu hỏi của khách vào lịch sử và clear input ngay lập tức
+    setMessages((prev) => [...prev, userMsg]);
+    setInput(""); // Clear state
+    setInputKey((prev) => prev + 1); // Force re-render textarea để đảm bảo xóa hoàn toàn
     setLoading(true);
 
     try {
@@ -63,11 +71,12 @@ export default function ChatBox({ onClose }: ChatBoxProps): JSX.Element {
 
       const data: { reply?: string } = await res.json();
       const aiText = data?.reply || "Xin lỗi, tôi không thể trả lời ngay lúc này.";
-      // Chỉ hiển thị lời chào và câu trả lời mới nhất
-      setMessages([GREETING, { role: "model", content: aiText }]);
+      // Thêm câu trả lời AI vào lịch sử (giữ lại tất cả messages cũ)
+      setMessages((prev) => [...prev, { role: "model", content: aiText }]);
     } catch (_e) {
-      setMessages([
-        GREETING,
+      // Thêm thông báo lỗi vào lịch sử
+      setMessages((prev) => [
+        ...prev,
         {
           role: "model",
           content: "Đã xảy ra lỗi kết nối đến máy chủ AI. Vui lòng thử lại sau.",
@@ -134,6 +143,8 @@ export default function ChatBox({ onClose }: ChatBoxProps): JSX.Element {
       <div className="px-3 pb-3">
         <div className="flex items-end gap-2">
           <textarea
+            key={inputKey}
+            ref={inputRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}

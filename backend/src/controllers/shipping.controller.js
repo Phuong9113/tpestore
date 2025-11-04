@@ -92,7 +92,16 @@ export const createShippingOrder = async (req, res, next) => {
 
 export const trackOrder = async (req, res, next) => {
 	try {
-		success(res, await ghnService.trackOrder(req.params.orderCode));
+        const raw = await ghnService.trackOrder(req.params.orderCode);
+        // GHN returns { code, message, data } and data can be an array
+        const payload = raw?.data !== undefined ? raw.data : raw;
+        const record = Array.isArray(payload) ? payload[0] : payload;
+        const logs = Array.isArray(record?.log) ? record.log : [];
+        const latestLog = logs
+            .slice()
+            .sort((a, b) => new Date(b.updated_date).getTime() - new Date(a.updated_date).getTime())[0];
+        const currentStatus = latestLog?.status || record?.status || null;
+        success(res, { ...record, currentStatus, latestLog, logsCount: logs.length });
 	} catch (err) {
 		next(err);
 	}
@@ -104,4 +113,49 @@ export const cancelOrder = async (req, res, next) => {
 	} catch (err) {
 		next(err);
 	}
+};
+
+export const getOrderDetail = async (req, res, next) => {
+    try {
+        const { orderCode } = req.params;
+        if (!orderCode) return res.status(400).json({ error: "Order code is required" });
+        const raw = await ghnService.getOrderDetail(orderCode);
+        try {
+            // eslint-disable-next-line no-console
+            console.log(`[GHN][Detail][Request] orderCode=${orderCode}`);
+            // eslint-disable-next-line no-console
+            console.log(`[GHN][Detail][Raw] code=${raw?.code || 'N/A'} message=${raw?.message || 'N/A'}`);
+        } catch {}
+        const payload = raw?.data !== undefined ? raw.data : raw;
+        const record = Array.isArray(payload) ? payload[0] : payload;
+        const logs = Array.isArray(record?.log) ? record.log : [];
+        const latestLog = logs
+            .slice()
+            .sort((a, b) => new Date(b.updated_date).getTime() - new Date(a.updated_date).getTime())[0];
+        const currentStatus = latestLog?.status || record?.status || null;
+        try {
+            // eslint-disable-next-line no-console
+            console.log(`[GHN][Detail][Normalized] orderCode=${orderCode} status=${record?.status || 'N/A'} currentStatus=${currentStatus || 'N/A'} logsCount=${logs.length}`);
+            if (logs.length > 0) {
+                const preview = logs.slice(0, 3).map(l => ({ status: l.status, updated_date: l.updated_date }));
+                // eslint-disable-next-line no-console
+                console.log(`[GHN][Detail][LogsPreview]`, preview);
+            }
+        } catch {}
+        const responseData = { ...record, currentStatus, latestLog, logsCount: logs.length };
+        try {
+            // eslint-disable-next-line no-console
+            console.log(`[GHN][Detail][Response] orderCode=${orderCode} send.currentStatus=${currentStatus || 'N/A'} send.logsCount=${logs.length}`);
+        } catch {}
+        success(res, responseData);
+    } catch (err) {
+        const msg = err?.message || "";
+        const unauthorized = /HTTP\s*401/i.test(msg);
+        const status = unauthorized ? 401 : 502;
+        try {
+            // eslint-disable-next-line no-console
+            console.error(`[GHN][Detail][Error]`, msg);
+        } catch {}
+        return res.status(status).json({ error: unauthorized ? "GHN token invalid" : "GHN API error", message: msg });
+    }
 };

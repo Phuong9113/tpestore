@@ -8,6 +8,7 @@ import {
 	createShippingOrder,
 	trackOrder,
 	cancelOrder,
+    getOrderDetail,
 } from "../../controllers/shipping.controller.js";
 
 const router = Router();
@@ -20,5 +21,6 @@ router.get("/services", getServices);
 router.post("/order", createShippingOrder);
 router.get("/track/:orderCode", trackOrder);
 router.post("/cancel/:orderCode", cancelOrder);
+router.get("/detail/:orderCode", getOrderDetail);
 
 export default router;
