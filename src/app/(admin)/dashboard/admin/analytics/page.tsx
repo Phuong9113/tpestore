@@ -135,17 +135,15 @@ export default function AnalyticsPage() {
         ))}
       </div>
 
-      {/* Charts Row 1 */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <RevenueChart period={timeRange} />
-        </div>
-        <CategoryChart />
+      {/* Charts Row 1: Doanh thu | Top sản phẩm bán chạy */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <RevenueChart period={timeRange} />
+        <TopProducts />
       </div>
 
       {/* Charts Row 2 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <TopProducts />
+        <CategoryChart />
         <SalesMap />
       </div>
 

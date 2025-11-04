@@ -101,7 +101,7 @@ export default function RevenueChart({ period = "30days" }: RevenueChartProps) {
 
   return (
     <div className="bg-card border border-border rounded-lg p-6">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-end justify-between mb-6">
         <div>
           <h3 className="text-lg font-semibold text-foreground">Doanh thu</h3>
           <p className="text-sm text-muted-foreground mt-1">
@@ -158,9 +158,9 @@ export default function RevenueChart({ period = "30days" }: RevenueChartProps) {
       ) : (
         <div className="relative w-full">
           {/* Chart container */}
-          <div className="relative" style={{ height: "256px", paddingBottom: "32px" }}>
+          <div className="relative" style={{ height: "256px", paddingBottom: "0px" }}>
             {/* Chart bars container - aligned to bottom */}
-            <div className="absolute inset-x-0 bottom-8 flex items-end justify-between gap-2" style={{ height: "256px" }}>
+            <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-2" style={{ height: "256px" }}>
               {chartData.map((item, index) => {
                 const heightPercentage = maxRevenue > 0 ? (item.revenue / maxRevenue) * 100 : 0
                 const barHeight = (heightPercentage / 100) * 256
@@ -215,7 +215,7 @@ export default function RevenueChart({ period = "30days" }: RevenueChartProps) {
             </div>
             
             {/* Chart grid lines for better visualization */}
-            <div className="absolute inset-x-0 bottom-8 pointer-events-none" style={{ height: "256px" }}>
+            <div className="absolute inset-x-0 bottom-0 pointer-events-none" style={{ height: "256px" }}>
               {[0, 25, 50, 75, 100].map((percent) => (
                 <div
                   key={percent}

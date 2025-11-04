@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation"
 import Header from "./Header"
 import Footer from "./Footer"
 import ToastContainer from "./ToastContainer"
+import ChatDock from "./ChatDock"
 
 export default function ConditionalLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
@@ -21,6 +22,7 @@ export default function ConditionalLayout({ children }: { children: React.ReactN
       <main className="min-h-screen">{children}</main>
       <Footer />
       <ToastContainer />
+      <ChatDock />
     </>
   )
 }

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import StatsCard from "@/components/admin/StatsCard"
 import RevenueChart from "@/components/admin/RevenueChart"
 import RecentOrders from "@/components/admin/RecentOrders"
+import TopProducts from "@/components/admin/TopProducts"
 import { ShoppingBagIcon, UsersIcon, CurrencyDollarIcon, ClipboardDocumentListIcon } from "@heroicons/react/24/outline"
 import { fetchDashboardStats } from "@/lib/api"
 
@@ -102,9 +103,14 @@ export default function AdminDashboard() {
         ))}
       </div>
 
-      {/* Charts and Tables */}
+      {/* Charts Row: Doanh thu | Top sản phẩm bán chạy */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <RevenueChart period="30days" />
+        <TopProducts />
+      </div>
+
+      {/* Recent Orders Row: full width */}
+      <div className="grid grid-cols-1 gap-6">
         <RecentOrders />
       </div>
     </div>
