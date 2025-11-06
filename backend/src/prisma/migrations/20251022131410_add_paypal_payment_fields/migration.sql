@@ -1,2 +1,0 @@
--- Historical migration placeholder for PayPal fields (kept for parity)
--- No-op in current schema

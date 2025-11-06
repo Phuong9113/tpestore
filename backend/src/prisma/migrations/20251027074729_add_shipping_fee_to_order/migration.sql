@@ -1,2 +1,0 @@
--- Add shipping fee to Order
-ALTER TABLE "Order" ADD COLUMN IF NOT EXISTS "shippingFee" DOUBLE PRECISION NOT NULL DEFAULT 0;

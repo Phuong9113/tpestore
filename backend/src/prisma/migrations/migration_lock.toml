@@ -1,2 +1,0 @@
-# This file keeps track of the migrations locking for Prisma CLI
-provider = "postgresql"
