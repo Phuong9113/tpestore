@@ -411,6 +411,7 @@ export interface Address {
   userId: string
   name: string
   phone: string
+  email?: string
   address: string
   province?: string
   district?: string

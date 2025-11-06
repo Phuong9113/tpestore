@@ -1,0 +1,636 @@
+0 verbose cli /usr/local/bin/node /usr/local/bin/npm
+1 info using npm@10.9.3
+2 info using node@v22.18.0
+3 silly config load:file:/usr/local/lib/node_modules/npm/npmrc
+4 silly config load:file:/Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/.npmrc
+5 silly config load:file:/Users/cas/.npmrc
+6 silly config load:file:/usr/local/etc/npmrc
+7 verbose title npm install nodemailer
+8 verbose argv "install" "nodemailer"
+9 verbose logfile logs-max:10 dir:/Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/.npm-cache/_logs/2025-11-06T12_36_37_990Z-
+10 verbose logfile /Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/.npm-cache/_logs/2025-11-06T12_36_37_990Z-debug-0.log
+11 silly logfile done cleaning log files
+12 silly packumentCache heap:4345298944 maxSize:1086324736 maxEntrySize:543162368
+13 silly idealTree buildDeps
+14 silly fetch manifest nodemailer@*
+15 silly packumentCache full:https://registry.npmjs.org/nodemailer cache-miss
+16 http fetch GET 200 https://registry.npmjs.org/nodemailer 216ms (cache miss)
+17 silly packumentCache full:https://registry.npmjs.org/nodemailer set size:undefined disposed:false
+18 silly placeDep ROOT nodemailer@7.0.10 OK for: tpestore@0.1.0 want: *
+19 silly reify moves {}
+20 verbose reify failed optional dependency /Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@tailwindcss/oxide-wasm32-wasi
+21 silly reify mark deleted [
+21 silly reify   '/Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@tailwindcss/oxide-wasm32-wasi'
+21 silly reify ]
+22 silly audit bulk request {
+22 silly audit   '@alloc/quick-lru': [ '5.2.0' ],
+22 silly audit   '@babel/runtime': [ '7.28.4' ],
+22 silly audit   '@emnapi/runtime': [ '1.5.0' ],
+22 silly audit   '@floating-ui/core': [ '1.7.3' ],
+22 silly audit   '@floating-ui/dom': [ '1.7.4' ],
+22 silly audit   '@floating-ui/react-dom': [ '2.1.6' ],
+22 silly audit   '@floating-ui/utils': [ '0.2.10' ],
+22 silly audit   '@geist-ui/react': [ '2.2.5' ],
+22 silly audit   '@google/generative-ai': [ '0.24.1' ],
+22 silly audit   '@heroicons/react': [ '2.2.0' ],
+22 silly audit   '@img/colour': [ '1.0.0' ],
+22 silly audit   '@img/sharp-darwin-arm64': [ '0.34.4' ],
+22 silly audit   '@img/sharp-darwin-x64': [ '0.34.4' ],
+22 silly audit   '@img/sharp-libvips-darwin-arm64': [ '1.2.3' ],
+22 silly audit   '@img/sharp-libvips-darwin-x64': [ '1.2.3' ],
+22 silly audit   '@img/sharp-libvips-linux-arm': [ '1.2.3' ],
+22 silly audit   '@img/sharp-libvips-linux-arm64': [ '1.2.3' ],
+22 silly audit   '@img/sharp-libvips-linux-ppc64': [ '1.2.3' ],
+22 silly audit   '@img/sharp-libvips-linux-s390x': [ '1.2.3' ],
+22 silly audit   '@img/sharp-libvips-linux-x64': [ '1.2.3' ],
+22 silly audit   '@img/sharp-libvips-linuxmusl-arm64': [ '1.2.3' ],
+22 silly audit   '@img/sharp-libvips-linuxmusl-x64': [ '1.2.3' ],
+22 silly audit   '@img/sharp-linux-arm': [ '0.34.4' ],
+22 silly audit   '@img/sharp-linux-arm64': [ '0.34.4' ],
+22 silly audit   '@img/sharp-linux-ppc64': [ '0.34.4' ],
+22 silly audit   '@img/sharp-linux-s390x': [ '0.34.4' ],
+22 silly audit   '@img/sharp-linux-x64': [ '0.34.4' ],
+22 silly audit   '@img/sharp-linuxmusl-arm64': [ '0.34.4' ],
+22 silly audit   '@img/sharp-linuxmusl-x64': [ '0.34.4' ],
+22 silly audit   '@img/sharp-wasm32': [ '0.34.4' ],
+22 silly audit   '@img/sharp-win32-arm64': [ '0.34.4' ],
+22 silly audit   '@img/sharp-win32-ia32': [ '0.34.4' ],
+22 silly audit   '@img/sharp-win32-x64': [ '0.34.4' ],
+22 silly audit   '@isaacs/fs-minipass': [ '4.0.1' ],
+22 silly audit   '@jridgewell/gen-mapping': [ '0.3.13' ],
+22 silly audit   '@jridgewell/remapping': [ '2.3.5' ],
+22 silly audit   '@jridgewell/resolve-uri': [ '3.1.2' ],
+22 silly audit   '@jridgewell/sourcemap-codec': [ '1.5.5' ],
+22 silly audit   '@jridgewell/trace-mapping': [ '0.3.31' ],
+22 silly audit   '@next/env': [ '15.5.4' ],
+22 silly audit   '@next/swc-darwin-arm64': [ '15.5.4' ],
+22 silly audit   '@next/swc-darwin-x64': [ '15.5.4' ],
+22 silly audit   '@next/swc-linux-arm64-gnu': [ '15.5.4' ],
+22 silly audit   '@next/swc-linux-arm64-musl': [ '15.5.4' ],
+22 silly audit   '@next/swc-linux-x64-gnu': [ '15.5.4' ],
+22 silly audit   '@next/swc-linux-x64-musl': [ '15.5.4' ],
+22 silly audit   '@next/swc-win32-arm64-msvc': [ '15.5.4' ],
+22 silly audit   '@next/swc-win32-x64-msvc': [ '15.5.4' ],
+22 silly audit   '@prisma/client': [ '6.17.1' ],
+22 silly audit   '@prisma/config': [ '6.17.1' ],
+22 silly audit   '@prisma/debug': [ '6.17.1' ],
+22 silly audit   '@prisma/engines': [ '6.17.1' ],
+22 silly audit   '@prisma/engines-version': [ '6.17.1-1.272a37d34178c2894197e17273bf937f25acdeac' ],
+22 silly audit   '@prisma/fetch-engine': [ '6.17.1' ],
+22 silly audit   '@prisma/get-platform': [ '6.17.1' ],
+22 silly audit   '@radix-ui/number': [ '1.1.1' ],
+22 silly audit   '@radix-ui/primitive': [ '1.1.3' ],
+22 silly audit   '@radix-ui/react-arrow': [ '1.1.7' ],
+22 silly audit   '@radix-ui/react-collection': [ '1.1.7' ],
+22 silly audit   '@radix-ui/react-compose-refs': [ '1.1.2' ],
+22 silly audit   '@radix-ui/react-context': [ '1.1.2' ],
+22 silly audit   '@radix-ui/react-direction': [ '1.1.1' ],
+22 silly audit   '@radix-ui/react-dismissable-layer': [ '1.1.11' ],
+22 silly audit   '@radix-ui/react-focus-guards': [ '1.1.3' ],
+22 silly audit   '@radix-ui/react-focus-scope': [ '1.1.7' ],
+22 silly audit   '@radix-ui/react-id': [ '1.1.1' ],
+22 silly audit   '@radix-ui/react-popper': [ '1.2.8' ],
+22 silly audit   '@radix-ui/react-portal': [ '1.1.9' ],
+22 silly audit   '@radix-ui/react-presence': [ '1.1.5' ],
+22 silly audit   '@radix-ui/react-primitive': [ '2.1.3' ],
+22 silly audit   '@radix-ui/react-select': [ '2.2.6' ],
+22 silly audit   '@radix-ui/react-slot': [ '1.2.3' ],
+22 silly audit   '@radix-ui/react-toast': [ '1.2.15' ],
+22 silly audit   '@radix-ui/react-use-callback-ref': [ '1.1.1' ],
+22 silly audit   '@radix-ui/react-use-controllable-state': [ '1.2.2' ],
+22 silly audit   '@radix-ui/react-use-effect-event': [ '0.0.2' ],
+22 silly audit   '@radix-ui/react-use-escape-keydown': [ '1.1.1' ],
+22 silly audit   '@radix-ui/react-use-layout-effect': [ '1.1.1' ],
+22 silly audit   '@radix-ui/react-use-previous': [ '1.1.1' ],
+22 silly audit   '@radix-ui/react-use-rect': [ '1.1.1' ],
+22 silly audit   '@radix-ui/react-use-size': [ '1.1.1' ],
+22 silly audit   '@radix-ui/react-visually-hidden': [ '1.2.3' ],
+22 silly audit   '@radix-ui/rect': [ '1.1.1' ],
+22 silly audit   '@standard-schema/spec': [ '1.0.0' ],
+22 silly audit   '@swc/helpers': [ '0.5.15' ],
+22 silly audit   '@tailwindcss/node': [ '4.1.14' ],
+22 silly audit   '@tailwindcss/oxide': [ '4.1.14' ],
+22 silly audit   '@tailwindcss/oxide-android-arm64': [ '4.1.14' ],
+22 silly audit   '@tailwindcss/oxide-darwin-arm64': [ '4.1.14' ],
+22 silly audit   '@tailwindcss/oxide-darwin-x64': [ '4.1.14' ],
+22 silly audit   '@tailwindcss/oxide-freebsd-x64': [ '4.1.14' ],
+22 silly audit   '@tailwindcss/oxide-linux-arm-gnueabihf': [ '4.1.14' ],
+22 silly audit   '@tailwindcss/oxide-linux-arm64-gnu': [ '4.1.14' ],
+22 silly audit   '@tailwindcss/oxide-linux-arm64-musl': [ '4.1.14' ],
+22 silly audit   '@tailwindcss/oxide-linux-x64-gnu': [ '4.1.14' ],
+22 silly audit   '@tailwindcss/oxide-linux-x64-musl': [ '4.1.14' ],
+22 silly audit   '@tailwindcss/oxide-win32-arm64-msvc': [ '4.1.14' ],
+22 silly audit   '@tailwindcss/oxide-win32-x64-msvc': [ '4.1.14' ],
+22 silly audit   '@tailwindcss/postcss': [ '4.1.14' ],
+22 silly audit   '@types/node': [ '20.19.22' ],
+22 silly audit   '@types/react': [ '19.2.2' ],
+22 silly audit   '@types/react-dom': [ '19.2.0' ],
+22 silly audit   '@vercel/analytics': [ '1.5.0' ],
+22 silly audit   accepts: [ '2.0.0' ],
+22 silly audit   'adler-32': [ '1.3.1' ],
+22 silly audit   'ansi-regex': [ '5.0.1' ],
+22 silly audit   'ansi-styles': [ '4.3.0' ],
+22 silly audit   'append-field': [ '1.0.0' ],
+22 silly audit   'aria-hidden': [ '1.2.6' ],
+22 silly audit   asynckit: [ '0.4.0' ],
+22 silly audit   axios: [ '1.13.0' ],
+22 silly audit   bcryptjs: [ '2.4.3' ],
+22 silly audit   'body-parser': [ '2.2.0' ],
+22 silly audit   'buffer-equal-constant-time': [ '1.0.1' ],
+22 silly audit   'buffer-from': [ '1.1.2' ],
+22 silly audit   busboy: [ '1.6.0' ],
+22 silly audit   bytes: [ '3.1.2' ],
+22 silly audit   c12: [ '3.1.0' ],
+22 silly audit   'call-bind-apply-helpers': [ '1.0.2' ],
+22 silly audit   'call-bound': [ '1.0.4' ],
+22 silly audit   'caniuse-lite': [ '1.0.30001748' ],
+22 silly audit   cfb: [ '1.2.2' ],
+22 silly audit   chalk: [ '4.1.2' ],
+22 silly audit   'supports-color': [ '7.2.0', '8.1.1' ],
+22 silly audit   chokidar: [ '4.0.3' ],
+22 silly audit   chownr: [ '3.0.0' ],
+22 silly audit   citty: [ '0.1.6' ],
+22 silly audit   'class-variance-authority': [ '0.7.1' ],
+22 silly audit   'client-only': [ '0.0.1' ],
+22 silly audit   cliui: [ '8.0.1' ],
+22 silly audit   clsx: [ '2.1.1' ],
+22 silly audit   codepage: [ '1.15.0' ],
+22 silly audit   'color-convert': [ '2.0.1' ],
+22 silly audit   'color-name': [ '1.1.4' ],
+22 silly audit   'combined-stream': [ '1.0.8' ],
+22 silly audit   'concat-stream': [ '2.0.0' ],
+22 silly audit   concurrently: [ '9.2.1' ],
+22 silly audit   confbox: [ '0.2.2' ],
+22 silly audit   consola: [ '3.4.2' ],
+22 silly audit   'content-disposition': [ '1.0.0' ],
+22 silly audit   'content-type': [ '1.0.5' ],
+22 silly audit   cookie: [ '0.7.2' ],
+22 silly audit   'cookie-signature': [ '1.2.2' ],
+22 silly audit   cors: [ '2.8.5' ],
+22 silly audit   'crc-32': [ '1.2.2' ],
+22 silly audit   csstype: [ '3.1.3' ],
+22 silly audit   debug: [ '4.4.3' ],
+22 silly audit   'deepmerge-ts': [ '7.1.5' ],
+22 silly audit   defu: [ '6.1.4' ],
+22 silly audit   'delayed-stream': [ '1.0.0' ],
+22 silly audit   depd: [ '2.0.0' ],
+22 silly audit   destr: [ '2.0.5' ],
+22 silly audit   'detect-libc': [ '2.1.2' ],
+22 silly audit   'detect-node-es': [ '1.1.0' ],
+22 silly audit   dotenv: [ '16.6.1' ],
+22 silly audit   'dunder-proto': [ '1.0.1' ],
+22 silly audit   'ecdsa-sig-formatter': [ '1.0.11' ],
+22 silly audit   'ee-first': [ '1.1.1' ],
+22 silly audit   effect: [ '3.16.12' ],
+22 silly audit   'emoji-regex': [ '8.0.0' ],
+22 silly audit   empathic: [ '2.0.0' ],
+22 silly audit   encodeurl: [ '2.0.0' ],
+22 silly audit   'enhanced-resolve': [ '5.18.3' ],
+22 silly audit   'es-define-property': [ '1.0.1' ],
+22 silly audit   'es-errors': [ '1.3.0' ],
+22 silly audit   'es-object-atoms': [ '1.1.1' ],
+22 silly audit   'es-set-tostringtag': [ '2.1.0' ],
+22 silly audit   escalade: [ '3.2.0' ],
+22 silly audit   'escape-html': [ '1.0.3' ],
+22 silly audit   etag: [ '1.8.1' ],
+22 silly audit   express: [ '5.1.0' ],
+22 silly audit   exsolve: [ '1.0.7' ],
+22 silly audit   'fast-check': [ '3.23.2' ],
+22 silly audit   finalhandler: [ '2.1.0' ],
+22 silly audit   'follow-redirects': [ '1.15.11' ],
+22 silly audit   'form-data': [ '4.0.4' ],
+22 silly audit   'mime-db': [ '1.52.0', '1.54.0' ],
+22 silly audit   'mime-types': [ '2.1.35', '3.0.1' ],
+22 silly audit   forwarded: [ '0.2.0' ],
+22 silly audit   frac: [ '1.1.2' ],
+22 silly audit   fresh: [ '2.0.0' ],
+22 silly audit   'function-bind': [ '1.1.2' ],
+22 silly audit   geist: [ '1.5.1' ],
+22 silly audit   'get-caller-file': [ '2.0.5' ],
+22 silly audit   'get-intrinsic': [ '1.3.0' ],
+22 silly audit   'get-nonce': [ '1.0.1' ],
+22 silly audit   'get-proto': [ '1.0.1' ],
+22 silly audit   giget: [ '2.0.0' ],
+22 silly audit   gopd: [ '1.2.0' ],
+22 silly audit   'graceful-fs': [ '4.2.11' ],
+22 silly audit   'has-flag': [ '4.0.0' ],
+22 silly audit   'has-symbols': [ '1.1.0' ],
+22 silly audit   'has-tostringtag': [ '1.0.2' ],
+22 silly audit   hasown: [ '2.0.2' ],
+22 silly audit   'http-errors': [ '2.0.0' ],
+22 silly audit   statuses: [ '2.0.1', '2.0.2' ],
+22 silly audit   'iconv-lite': [ '0.6.3', '0.7.0' ],
+22 silly audit   inherits: [ '2.0.4' ],
+22 silly audit   'ipaddr.js': [ '1.9.1' ],
+22 silly audit   'is-fullwidth-code-point': [ '3.0.0' ],
+22 silly audit   'is-promise': [ '4.0.0' ],
+22 silly audit   jiti: [ '2.6.1' ],
+22 silly audit   jsonwebtoken: [ '9.0.2' ],
+22 silly audit   jwa: [ '1.4.2' ],
+22 silly audit   jws: [ '3.2.2' ],
+22 silly audit   lightningcss: [ '1.30.1' ],
+22 silly audit   'lightningcss-darwin-arm64': [ '1.30.1' ],
+22 silly audit   'lightningcss-darwin-x64': [ '1.30.1' ],
+22 silly audit   'lightningcss-freebsd-x64': [ '1.30.1' ],
+22 silly audit   'lightningcss-linux-arm-gnueabihf': [ '1.30.1' ],
+22 silly audit   'lightningcss-linux-arm64-gnu': [ '1.30.1' ],
+22 silly audit   'lightningcss-linux-arm64-musl': [ '1.30.1' ],
+22 silly audit   'lightningcss-linux-x64-gnu': [ '1.30.1' ],
+22 silly audit   'lightningcss-linux-x64-musl': [ '1.30.1' ],
+22 silly audit   'lightningcss-win32-arm64-msvc': [ '1.30.1' ],
+22 silly audit   'lightningcss-win32-x64-msvc': [ '1.30.1' ],
+22 silly audit   'lodash.includes': [ '4.3.0' ],
+22 silly audit   'lodash.isboolean': [ '3.0.3' ],
+22 silly audit   'lodash.isinteger': [ '4.0.4' ],
+22 silly audit   'lodash.isnumber': [ '3.0.3' ],
+22 silly audit   'lodash.isplainobject': [ '4.0.6' ],
+22 silly audit   'lodash.isstring': [ '4.0.1' ],
+22 silly audit   'lodash.once': [ '4.1.1' ],
+22 silly audit   'magic-string': [ '0.30.19' ],
+22 silly audit   'math-intrinsics': [ '1.1.0' ],
+22 silly audit   'media-typer': [ '1.1.0', '0.3.0' ],
+22 silly audit   'merge-descriptors': [ '2.0.0' ],
+22 silly audit   minimist: [ '1.2.8' ],
+22 silly audit   minipass: [ '7.1.2' ],
+22 silly audit   minizlib: [ '3.1.0' ],
+22 silly audit   mkdirp: [ '0.5.6' ],
+22 silly audit   ms: [ '2.1.3' ],
+22 silly audit   multer: [ '2.0.2' ],
+22 silly audit   'type-is': [ '1.6.18', '2.0.1' ],
+22 silly audit   nanoid: [ '3.3.11' ],
+22 silly audit   negotiator: [ '1.0.0' ],
+22 silly audit   next: [ '15.5.4' ],
+22 silly audit   'next-themes': [ '0.4.6' ],
+22 silly audit   postcss: [ '8.4.31', '8.5.6' ],
+22 silly audit   'node-cron': [ '4.2.1' ],
+22 silly audit   'node-fetch-native': [ '1.6.7' ],
+22 silly audit   nypm: [ '0.6.2' ],
+22 silly audit   'object-assign': [ '4.1.1' ],
+22 silly audit   'object-inspect': [ '1.13.4' ],
+22 silly audit   ohash: [ '2.0.11' ],
+22 silly audit   'on-finished': [ '2.4.1' ],
+22 silly audit   once: [ '1.4.0' ],
+22 silly audit   parseurl: [ '1.3.3' ],
+22 silly audit   'path-to-regexp': [ '8.3.0' ],
+22 silly audit   pathe: [ '2.0.3' ],
+22 silly audit   'perfect-debounce': [ '1.0.0' ],
+22 silly audit   picocolors: [ '1.1.1' ],
+22 silly audit   'pkg-types': [ '2.3.0' ],
+22 silly audit   prisma: [ '6.17.1' ],
+22 silly audit   'proxy-addr': [ '2.0.7' ],
+22 silly audit   'proxy-from-env': [ '1.1.0' ],
+22 silly audit   'pure-rand': [ '6.1.0' ],
+22 silly audit   qs: [ '6.14.0' ],
+22 silly audit   'range-parser': [ '1.2.1' ],
+22 silly audit   'raw-body': [ '3.0.1' ],
+22 silly audit   rc9: [ '2.1.2' ],
+22 silly audit   react: [ '19.1.0' ],
+22 silly audit   'react-dom': [ '19.1.0' ],
+22 silly audit   'react-remove-scroll': [ '2.7.1' ],
+22 silly audit   'react-remove-scroll-bar': [ '2.3.8' ],
+22 silly audit   'react-style-singleton': [ '2.2.3' ],
+22 silly audit   'readable-stream': [ '3.6.2' ],
+22 silly audit   readdirp: [ '4.1.2' ],
+22 silly audit   'require-directory': [ '2.1.1' ],
+22 silly audit   router: [ '2.2.0' ],
+22 silly audit   rxjs: [ '7.8.2' ],
+22 silly audit   'safe-buffer': [ '5.2.1' ],
+22 silly audit   'safer-buffer': [ '2.1.2' ],
+22 silly audit   scheduler: [ '0.26.0' ],
+22 silly audit   semver: [ '7.7.2' ],
+22 silly audit   send: [ '1.2.0' ],
+22 silly audit   'serve-static': [ '2.2.0' ],
+22 silly audit   setprototypeof: [ '1.2.0' ],
+22 silly audit   sharp: [ '0.34.4' ],
+22 silly audit   'shell-quote': [ '1.8.3' ],
+22 silly audit   'side-channel': [ '1.1.0' ],
+22 silly audit   'side-channel-list': [ '1.0.0' ],
+22 silly audit   'side-channel-map': [ '1.0.1' ],
+22 silly audit   'side-channel-weakmap': [ '1.0.2' ],
+22 silly audit   'source-map-js': [ '1.2.1' ],
+22 silly audit   ssf: [ '0.11.2' ],
+22 silly audit   streamsearch: [ '1.1.0' ],
+22 silly audit   string_decoder: [ '1.3.0' ],
+22 silly audit   'string-width': [ '4.2.3' ],
+22 silly audit   'strip-ansi': [ '6.0.1' ],
+22 silly audit   'styled-jsx': [ '5.1.6' ],
+22 silly audit   'tailwind-merge': [ '3.3.1' ],
+22 silly audit   tailwindcss: [ '4.1.14' ],
+22 silly audit   tapable: [ '2.3.0' ],
+22 silly audit   tar: [ '7.5.1' ],
+22 silly audit   tinyexec: [ '1.0.1' ],
+22 silly audit   toidentifier: [ '1.0.1' ],
+22 silly audit   'tree-kill': [ '1.2.2' ],
+22 silly audit   tslib: [ '2.8.1' ],
+22 silly audit   'tw-animate-css': [ '1.4.0' ],
+22 silly audit   typedarray: [ '0.0.6' ],
+22 silly audit   typescript: [ '5.9.3' ],
+22 silly audit   'undici-types': [ '6.21.0' ],
+22 silly audit   unpipe: [ '1.0.0' ],
+22 silly audit   'use-callback-ref': [ '1.3.3' ],
+22 silly audit   'use-sidecar': [ '1.1.3' ],
+22 silly audit   'util-deprecate': [ '1.0.2' ],
+22 silly audit   vary: [ '1.1.2' ],
+22 silly audit   wmf: [ '1.0.2' ],
+22 silly audit   word: [ '0.3.0' ],
+22 silly audit   'wrap-ansi': [ '7.0.0' ],
+22 silly audit   wrappy: [ '1.0.2' ],
+22 silly audit   xlsx: [ '0.18.5' ],
+22 silly audit   xtend: [ '4.0.2' ],
+22 silly audit   y18n: [ '5.0.8' ],
+22 silly audit   yallist: [ '5.0.0' ],
+22 silly audit   yargs: [ '17.7.2' ],
+22 silly audit   'yargs-parser': [ '21.1.1' ],
+22 silly audit   nodemailer: [ '7.0.10' ],
+22 silly audit   '@tailwindcss/oxide-wasm32-wasi': [ '4.1.14' ]
+22 silly audit }
+23 verbose reify failed optional dependency /Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/lightningcss-win32-x64-msvc
+24 silly reify mark deleted [
+24 silly reify   '/Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/lightningcss-win32-x64-msvc'
+24 silly reify ]
+25 verbose reify failed optional dependency /Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/lightningcss-win32-arm64-msvc
+26 silly reify mark deleted [
+26 silly reify   '/Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/lightningcss-win32-arm64-msvc'
+26 silly reify ]
+27 verbose reify failed optional dependency /Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/lightningcss-linux-x64-musl
+28 silly reify mark deleted [
+28 silly reify   '/Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/lightningcss-linux-x64-musl'
+28 silly reify ]
+29 verbose reify failed optional dependency /Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/lightningcss-linux-x64-gnu
+30 silly reify mark deleted [
+30 silly reify   '/Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/lightningcss-linux-x64-gnu'
+30 silly reify ]
+31 verbose reify failed optional dependency /Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/lightningcss-linux-arm64-musl
+32 silly reify mark deleted [
+32 silly reify   '/Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/lightningcss-linux-arm64-musl'
+32 silly reify ]
+33 verbose reify failed optional dependency /Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/lightningcss-linux-arm64-gnu
+34 silly reify mark deleted [
+34 silly reify   '/Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/lightningcss-linux-arm64-gnu'
+34 silly reify ]
+35 verbose reify failed optional dependency /Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/lightningcss-linux-arm-gnueabihf
+36 silly reify mark deleted [
+36 silly reify   '/Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/lightningcss-linux-arm-gnueabihf'
+36 silly reify ]
+37 verbose reify failed optional dependency /Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/lightningcss-freebsd-x64
+38 silly reify mark deleted [
+38 silly reify   '/Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/lightningcss-freebsd-x64'
+38 silly reify ]
+39 verbose reify failed optional dependency /Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/lightningcss-darwin-x64
+40 silly reify mark deleted [
+40 silly reify   '/Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/lightningcss-darwin-x64'
+40 silly reify ]
+41 verbose reify failed optional dependency /Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@tailwindcss/oxide-win32-x64-msvc
+42 silly reify mark deleted [
+42 silly reify   '/Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@tailwindcss/oxide-win32-x64-msvc'
+42 silly reify ]
+43 verbose reify failed optional dependency /Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@tailwindcss/oxide-win32-arm64-msvc
+44 silly reify mark deleted [
+44 silly reify   '/Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@tailwindcss/oxide-win32-arm64-msvc'
+44 silly reify ]
+45 verbose reify failed optional dependency /Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@tailwindcss/oxide-linux-x64-musl
+46 silly reify mark deleted [
+46 silly reify   '/Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@tailwindcss/oxide-linux-x64-musl'
+46 silly reify ]
+47 verbose reify failed optional dependency /Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@tailwindcss/oxide-linux-x64-gnu
+48 silly reify mark deleted [
+48 silly reify   '/Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@tailwindcss/oxide-linux-x64-gnu'
+48 silly reify ]
+49 verbose reify failed optional dependency /Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@tailwindcss/oxide-linux-arm64-musl
+50 silly reify mark deleted [
+50 silly reify   '/Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@tailwindcss/oxide-linux-arm64-musl'
+50 silly reify ]
+51 verbose reify failed optional dependency /Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@tailwindcss/oxide-linux-arm64-gnu
+52 silly reify mark deleted [
+52 silly reify   '/Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@tailwindcss/oxide-linux-arm64-gnu'
+52 silly reify ]
+53 verbose reify failed optional dependency /Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@tailwindcss/oxide-linux-arm-gnueabihf
+54 silly reify mark deleted [
+54 silly reify   '/Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@tailwindcss/oxide-linux-arm-gnueabihf'
+54 silly reify ]
+55 verbose reify failed optional dependency /Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@tailwindcss/oxide-freebsd-x64
+56 silly reify mark deleted [
+56 silly reify   '/Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@tailwindcss/oxide-freebsd-x64'
+56 silly reify ]
+57 verbose reify failed optional dependency /Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@tailwindcss/oxide-darwin-x64
+58 silly reify mark deleted [
+58 silly reify   '/Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@tailwindcss/oxide-darwin-x64'
+58 silly reify ]
+59 verbose reify failed optional dependency /Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@tailwindcss/oxide-android-arm64
+60 silly reify mark deleted [
+60 silly reify   '/Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@tailwindcss/oxide-android-arm64'
+60 silly reify ]
+61 verbose reify failed optional dependency /Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@next/swc-win32-x64-msvc
+62 silly reify mark deleted [
+62 silly reify   '/Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@next/swc-win32-x64-msvc'
+62 silly reify ]
+63 verbose reify failed optional dependency /Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@next/swc-win32-arm64-msvc
+64 silly reify mark deleted [
+64 silly reify   '/Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@next/swc-win32-arm64-msvc'
+64 silly reify ]
+65 verbose reify failed optional dependency /Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@next/swc-linux-x64-musl
+66 silly reify mark deleted [
+66 silly reify   '/Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@next/swc-linux-x64-musl'
+66 silly reify ]
+67 verbose reify failed optional dependency /Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@next/swc-linux-x64-gnu
+68 silly reify mark deleted [
+68 silly reify   '/Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@next/swc-linux-x64-gnu'
+68 silly reify ]
+69 verbose reify failed optional dependency /Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@next/swc-linux-arm64-musl
+70 silly reify mark deleted [
+70 silly reify   '/Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@next/swc-linux-arm64-musl'
+70 silly reify ]
+71 verbose reify failed optional dependency /Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@next/swc-linux-arm64-gnu
+72 silly reify mark deleted [
+72 silly reify   '/Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@next/swc-linux-arm64-gnu'
+72 silly reify ]
+73 verbose reify failed optional dependency /Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@next/swc-darwin-x64
+74 silly reify mark deleted [
+74 silly reify   '/Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@next/swc-darwin-x64'
+74 silly reify ]
+75 verbose reify failed optional dependency /Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@img/sharp-win32-x64
+76 silly reify mark deleted [
+76 silly reify   '/Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@img/sharp-win32-x64'
+76 silly reify ]
+77 verbose reify failed optional dependency /Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@img/sharp-win32-ia32
+78 silly reify mark deleted [
+78 silly reify   '/Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@img/sharp-win32-ia32'
+78 silly reify ]
+79 verbose reify failed optional dependency /Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@img/sharp-win32-arm64
+80 silly reify mark deleted [
+80 silly reify   '/Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@img/sharp-win32-arm64'
+80 silly reify ]
+81 verbose reify failed optional dependency /Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@img/sharp-wasm32
+82 silly reify mark deleted [
+82 silly reify   '/Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@img/sharp-wasm32'
+82 silly reify ]
+83 verbose reify failed optional dependency /Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@img/sharp-linuxmusl-x64
+84 silly reify mark deleted [
+84 silly reify   '/Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@img/sharp-linuxmusl-x64'
+84 silly reify ]
+85 verbose reify failed optional dependency /Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@img/sharp-linuxmusl-arm64
+86 silly reify mark deleted [
+86 silly reify   '/Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@img/sharp-linuxmusl-arm64'
+86 silly reify ]
+87 verbose reify failed optional dependency /Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@img/sharp-linux-x64
+88 silly reify mark deleted [
+88 silly reify   '/Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@img/sharp-linux-x64'
+88 silly reify ]
+89 verbose reify failed optional dependency /Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@img/sharp-linux-s390x
+90 silly reify mark deleted [
+90 silly reify   '/Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@img/sharp-linux-s390x'
+90 silly reify ]
+91 verbose reify failed optional dependency /Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@img/sharp-linux-ppc64
+92 silly reify mark deleted [
+92 silly reify   '/Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@img/sharp-linux-ppc64'
+92 silly reify ]
+93 verbose reify failed optional dependency /Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@img/sharp-linux-arm64
+94 silly reify mark deleted [
+94 silly reify   '/Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@img/sharp-linux-arm64'
+94 silly reify ]
+95 verbose reify failed optional dependency /Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@img/sharp-linux-arm
+96 silly reify mark deleted [
+96 silly reify   '/Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@img/sharp-linux-arm'
+96 silly reify ]
+97 verbose reify failed optional dependency /Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@img/sharp-libvips-linuxmusl-x64
+98 silly reify mark deleted [
+98 silly reify   '/Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@img/sharp-libvips-linuxmusl-x64'
+98 silly reify ]
+99 verbose reify failed optional dependency /Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@img/sharp-libvips-linuxmusl-arm64
+100 silly reify mark deleted [
+100 silly reify   '/Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@img/sharp-libvips-linuxmusl-arm64'
+100 silly reify ]
+101 verbose reify failed optional dependency /Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@img/sharp-libvips-linux-x64
+102 silly reify mark deleted [
+102 silly reify   '/Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@img/sharp-libvips-linux-x64'
+102 silly reify ]
+103 verbose reify failed optional dependency /Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@img/sharp-libvips-linux-s390x
+104 silly reify mark deleted [
+104 silly reify   '/Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@img/sharp-libvips-linux-s390x'
+104 silly reify ]
+105 verbose reify failed optional dependency /Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@img/sharp-libvips-linux-ppc64
+106 silly reify mark deleted [
+106 silly reify   '/Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@img/sharp-libvips-linux-ppc64'
+106 silly reify ]
+107 verbose reify failed optional dependency /Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@img/sharp-libvips-linux-arm64
+108 silly reify mark deleted [
+108 silly reify   '/Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@img/sharp-libvips-linux-arm64'
+108 silly reify ]
+109 verbose reify failed optional dependency /Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@img/sharp-libvips-linux-arm
+110 silly reify mark deleted [
+110 silly reify   '/Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@img/sharp-libvips-linux-arm'
+110 silly reify ]
+111 verbose reify failed optional dependency /Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@img/sharp-libvips-darwin-x64
+112 silly reify mark deleted [
+112 silly reify   '/Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@img/sharp-libvips-darwin-x64'
+112 silly reify ]
+113 verbose reify failed optional dependency /Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@img/sharp-darwin-x64
+114 silly reify mark deleted [
+114 silly reify   '/Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore/node_modules/@img/sharp-darwin-x64'
+114 silly reify ]
+115 http fetch GET 200 https://registry.npmjs.org/npm 291ms
+116 http cache nodemailer@https://registry.npmjs.org/nodemailer/-/nodemailer-7.0.10.tgz 0ms (cache hit)
+117 silly tarball no local data for nodemailer@https://registry.npmjs.org/nodemailer/-/nodemailer-7.0.10.tgz. Extracting by manifest.
+118 http fetch GET 200 https://registry.npmjs.org/nodemailer/-/nodemailer-7.0.10.tgz 79ms (cache miss)
+119 http fetch POST 200 https://registry.npmjs.org/-/npm/v1/security/advisories/bulk 254ms
+120 silly audit report {
+120 silly audit report   tar: [
+120 silly audit report     {
+120 silly audit report       id: 1109463,
+120 silly audit report       url: 'https://github.com/advisories/GHSA-29xp-372q-xqph',
+120 silly audit report       title: 'node-tar has a race condition leading to uninitialized memory exposure',
+120 silly audit report       severity: 'moderate',
+120 silly audit report       vulnerable_versions: '=7.5.1',
+120 silly audit report       cwe: [Array],
+120 silly audit report       cvss: [Object]
+120 silly audit report     }
+120 silly audit report   ],
+120 silly audit report   xlsx: [
+120 silly audit report     {
+120 silly audit report       id: 1108110,
+120 silly audit report       url: 'https://github.com/advisories/GHSA-4r6h-8v6p-xvw6',
+120 silly audit report       title: 'Prototype Pollution in sheetJS',
+120 silly audit report       severity: 'high',
+120 silly audit report       vulnerable_versions: '<0.19.3',
+120 silly audit report       cwe: [Array],
+120 silly audit report       cvss: [Object]
+120 silly audit report     },
+120 silly audit report     {
+120 silly audit report       id: 1108111,
+120 silly audit report       url: 'https://github.com/advisories/GHSA-5pgg-2g8v-p4x9',
+120 silly audit report       title: 'SheetJS Regular Expression Denial of Service (ReDoS)',
+120 silly audit report       severity: 'high',
+120 silly audit report       vulnerable_versions: '<0.20.2',
+120 silly audit report       cwe: [Array],
+120 silly audit report       cvss: [Object]
+120 silly audit report     }
+120 silly audit report   ]
+120 silly audit report }
+121 silly packumentCache corgi:https://registry.npmjs.org/tar cache-miss
+122 silly packumentCache corgi:https://registry.npmjs.org/xlsx cache-miss
+123 http fetch GET 200 https://registry.npmjs.org/xlsx 72ms (cache miss)
+124 silly packumentCache corgi:https://registry.npmjs.org/xlsx set size:undefined disposed:false
+125 http fetch GET 200 https://registry.npmjs.org/tar 79ms (cache miss)
+126 silly packumentCache corgi:https://registry.npmjs.org/tar set size:undefined disposed:false
+127 silly packumentCache corgi:https://registry.npmjs.org/@tailwindcss%2foxide cache-miss
+128 http fetch GET 200 https://registry.npmjs.org/@tailwindcss%2foxide 124ms (cache miss)
+129 silly packumentCache corgi:https://registry.npmjs.org/@tailwindcss%2foxide set size:undefined disposed:false
+130 silly ADD node_modules/nodemailer
+131 silly ADD
+132 silly ADD
+133 silly ADD
+134 silly ADD
+135 silly ADD
+136 silly ADD
+137 silly ADD
+138 silly ADD
+139 silly ADD
+140 silly ADD
+141 silly ADD
+142 silly ADD
+143 silly ADD
+144 silly ADD
+145 silly ADD
+146 silly ADD
+147 silly ADD
+148 silly ADD
+149 silly ADD
+150 silly ADD
+151 silly ADD
+152 silly ADD
+153 silly ADD
+154 silly ADD
+155 silly ADD
+156 silly ADD
+157 silly ADD
+158 silly ADD
+159 silly ADD
+160 silly ADD
+161 silly ADD
+162 silly ADD
+163 silly ADD
+164 silly ADD
+165 silly ADD
+166 silly ADD
+167 silly ADD
+168 silly ADD
+169 silly ADD
+170 silly ADD
+171 silly ADD
+172 silly ADD
+173 silly ADD
+174 silly ADD
+175 silly ADD
+176 silly ADD
+177 silly ADD
+178 verbose cwd /Users/cas/Documents/Project_BCTN/TPE_Store_1/tpestore
+179 verbose os Darwin 24.5.0
+180 verbose node v22.18.0
+181 verbose npm  v10.9.3
+182 notice
+182 notice New major version of npm available! 10.9.3 -> 11.6.2
+182 notice Changelog: https://github.com/npm/cli/releases/tag/v11.6.2
+182 notice To update run: npm install -g npm@11.6.2
+182 notice  { force: true, [Symbol(proc-log.meta)]: true }
+183 verbose exit 0
+184 info ok

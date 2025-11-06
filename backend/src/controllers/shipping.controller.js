@@ -1,4 +1,5 @@
 import ghnService from "../services/ghn.service.js";
+import { sendOrderCreatedEmail } from "../utils/email.js";
 import { success } from "../utils/response.js";
 import prisma from "../utils/prisma.js";
 
@@ -53,7 +54,7 @@ export const getServices = async (req, res, next) => {
 
 export const createShippingOrder = async (req, res, next) => {
 	try {
-		let payload = { ...req.body };
+        let payload = { ...req.body };
 		try {
 			if (req.body?.orderId) {
 				const order = await prisma.order.findUnique({ where: { id: req.body.orderId } });
@@ -65,19 +66,69 @@ export const createShippingOrder = async (req, res, next) => {
 				}
 			}
 		} catch {}
-		const result = await ghnService.createShippingOrder(payload);
-		let updatedOrder = null;
+        const result = await ghnService.createShippingOrder(payload);
+        let updatedOrder = null;
 		try {
 			const orderCode = result?.data?.order_code;
 			const orderId = req.body?.orderId;
 			if (orderCode && orderId) {
-				updatedOrder = await prisma.order.update({ 
-					where: { id: orderId }, 
-					data: { ghnOrderCode: orderCode, status: "PROCESSING" },
-					include: { orderItems: { include: { product: { select: { id: true, name: true, image: true, price: true } } } } }
-				});
+                updatedOrder = await prisma.order.update({
+                    where: { id: orderId },
+                    data: { ghnOrderCode: orderCode, status: "PROCESSING" },
+                    include: {
+                        user: { select: { id: true, name: true, email: true } },
+                        orderItems: { include: { product: { select: { id: true, name: true, image: true, price: true } } } },
+                    },
+                });
 				// eslint-disable-next-line no-console
 				console.log("[GHN][CreateOrder] Updated order status to PROCESSING:", orderId, "ghnOrderCode:", orderCode);
+                try {
+                    const ok = Number(result?.code) === 200;
+                    // Use account email only (no shipping email required)
+                    const toEmail = (updatedOrder?.user?.email || "").trim();
+                    if (ok && toEmail) {
+                        const customerName = updatedOrder.user.name || updatedOrder.shippingName || "Quý khách";
+                        const addressParts = [
+                            updatedOrder.shippingAddress,
+                            updatedOrder.shippingWard,
+                            updatedOrder.shippingDistrict,
+                            updatedOrder.shippingProvince,
+                        ].filter(Boolean);
+                        const shippingAddress = addressParts.join(", ");
+                        const items = (updatedOrder.orderItems || []).map((item) => {
+                            const productImage = item.product?.image || "";
+                            // eslint-disable-next-line no-console
+                            console.log("[Email] Product image path:", productImage, "for product:", item.product?.name);
+                            return {
+                                name: item.product?.name || "Sản phẩm",
+                                quantity: item.quantity || 1,
+                                price: item.price || 0,
+                                image: productImage, // Keep original path, will be converted in email template
+                            };
+                        });
+
+                        const emailResult = await sendOrderCreatedEmail({
+                            to: toEmail,
+                            customerName,
+                            ghnCode: orderCode,
+                            shippingFee: updatedOrder.shippingFee || 0,
+                            totalPrice: updatedOrder.totalPrice || 0,
+                            createdAt: updatedOrder.createdAt,
+                            address: shippingAddress,
+                            items,
+                        });
+                        if (emailResult?.skipped) {
+                            // eslint-disable-next-line no-console
+                            console.warn("[Email] Email skipped - SMTP not configured. Email should be sent to:", toEmail);
+                        } else {
+                            // eslint-disable-next-line no-console
+                            console.log("[Email] Sent order created email to", toEmail, "for order", orderId);
+                        }
+                    }
+                } catch (mailErr) {
+                    // eslint-disable-next-line no-console
+                    console.error("[Email] Failed to send order created email:", mailErr?.message || mailErr);
+                }
 			}
 		} catch (err) {
 			// eslint-disable-next-line no-console

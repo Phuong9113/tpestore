@@ -1369,6 +1369,8 @@ function ProfilePageContent() {
                       </div>
                     </div>
 
+                    {/* Email field removed as per requirement */}
+
                     <div>
                       <Label htmlFor="addr-address">Địa chỉ chi tiết *</Label>
                       <Input

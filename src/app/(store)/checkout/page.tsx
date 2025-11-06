@@ -18,6 +18,7 @@ import { Separator } from "@/components/ui/separator";
 import { useCart } from "@/contexts/CartContext";
 import { toast } from "sonner";
 import { api, fetchAddresses, createAddress, type Address as AddressType } from "@/lib/api";
+import { me } from "@/lib/auth";
 
 interface Province {
   ProvinceID: number;
@@ -199,7 +200,7 @@ export default function CheckoutPage() {
       district: districtId,
       ward: wardCode,
       hamlet: address.hamlet || "",
-      email: "",
+      email: shippingInfo.email || "",
     });
     
     console.log("Shipping info set with province:", provinceId, "district:", districtId, "ward:", wardCode);
@@ -427,6 +428,8 @@ export default function CheckoutPage() {
       toast.error("Số điện thoại không đúng định dạng. Vui lòng nhập số điện thoại Việt Nam hợp lệ (10 số, bắt đầu bằng 0)");
       return;
     }
+
+    // No email validation (email optional at checkout)
 
     try {
       setLoading(true);
@@ -745,7 +748,7 @@ export default function CheckoutPage() {
                     type="email"
                     value={shippingInfo.email}
                     onChange={(e) => handleInputChange("email", e.target.value)}
-                    placeholder="Nhập email (không bắt buộc)"
+                    placeholder="Nhập email nhận thông báo đơn hàng (không bắt buộc)"
                   />
                 </div>
 

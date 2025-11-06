@@ -2,6 +2,7 @@ import prisma from "../utils/prisma.js";
 import { success } from "../utils/response.js";
 import zalopayService from "../services/zalopay.service.js";
 import ghnService from "../services/ghn.service.js";
+import { sendOrderCreatedEmail } from "../utils/email.js";
 
 export const createZaloPayOrder = async (req, res, next) => {
 	try {
@@ -114,11 +115,65 @@ export const handleZaloPayCallback = async (req, res) => {
 			};
 			const ghnResult = await ghnService.createShippingOrder(shippingData);
 			if (ghnResult?.data?.order_code) {
-				await prisma.order.update({ where: { id: order.id }, data: { ghnOrderCode: ghnResult.data.order_code, status: "PROCESSING" } });
+				const updatedOrder = await prisma.order.update({
+					where: { id: order.id },
+					data: { ghnOrderCode: ghnResult.data.order_code, status: "PROCESSING" },
+					include: {
+						user: { select: { id: true, name: true, email: true } },
+						orderItems: { include: { product: { select: { id: true, name: true, image: true, price: true } } } },
+					},
+				});
 				try {
 					// eslint-disable-next-line no-console
 					console.log("[ZLP][Callback] GHN order created:", ghnResult.data.order_code);
 				} catch {}
+				// Send email confirmation
+				try {
+					const ok = Number(ghnResult?.code) === 200;
+					const toEmail = (updatedOrder?.user?.email || "").trim();
+					if (ok && toEmail) {
+						const customerName = updatedOrder.user.name || updatedOrder.shippingName || "Quý khách";
+						const addressParts = [
+							updatedOrder.shippingAddress,
+							updatedOrder.shippingWard,
+							updatedOrder.shippingDistrict,
+							updatedOrder.shippingProvince,
+						].filter(Boolean);
+						const shippingAddress = addressParts.join(", ");
+						const items = (updatedOrder.orderItems || []).map((item) => {
+							const productImage = item.product?.image || "";
+							// eslint-disable-next-line no-console
+							console.log("[Email] Product image path:", productImage, "for product:", item.product?.name);
+							return {
+								name: item.product?.name || "Sản phẩm",
+								quantity: item.quantity || 1,
+								price: item.price || 0,
+								image: productImage, // Keep original path, will be converted in email template
+							};
+						});
+
+						const emailResult = await sendOrderCreatedEmail({
+							to: toEmail,
+							customerName,
+							ghnCode: ghnResult.data.order_code,
+							shippingFee: updatedOrder.shippingFee || 0,
+							totalPrice: updatedOrder.totalPrice || 0,
+							createdAt: updatedOrder.createdAt,
+							address: shippingAddress,
+							items,
+						});
+						if (emailResult?.skipped) {
+							// eslint-disable-next-line no-console
+							console.warn("[Email] Email skipped - SMTP not configured. Email should be sent to:", toEmail);
+						} else {
+							// eslint-disable-next-line no-console
+							console.log("[Email] Sent order created email to", toEmail, "for order", order.id);
+						}
+					}
+				} catch (mailErr) {
+					// eslint-disable-next-line no-console
+					console.error("[Email] Failed to send order created email:", mailErr?.message || mailErr);
+				}
 			} else {
 				try {
 					// eslint-disable-next-line no-console
@@ -179,8 +234,60 @@ export const verifyZaloPayPayment = async (req, res) => {
 						items: order.orderItems.map((item) => ({ name: item.product.name, quantity: item.quantity, weight: 200, price: item.price })),
 					};
 					const ghnResult = await ghnService.createShippingOrder(shippingData);
-					if (ghnResult.data?.order_code)
-						await prisma.order.update({ where: { id: order.id }, data: { ghnOrderCode: ghnResult.data.order_code, status: "PROCESSING" } });
+					if (ghnResult.data?.order_code) {
+						const updatedOrder = await prisma.order.update({
+							where: { id: order.id },
+							data: { ghnOrderCode: ghnResult.data.order_code, status: "PROCESSING" },
+							include: {
+								user: { select: { id: true, name: true, email: true } },
+								orderItems: { include: { product: { select: { id: true, name: true, image: true, price: true } } } },
+							},
+						});
+						// Send email confirmation
+						try {
+							const ok = Number(ghnResult?.code) === 200;
+							const toEmail = (updatedOrder?.user?.email || "").trim();
+							if (ok && toEmail) {
+								const customerName = updatedOrder.user.name || updatedOrder.shippingName || "Quý khách";
+								const addressParts = [
+									updatedOrder.shippingAddress,
+									updatedOrder.shippingWard,
+									updatedOrder.shippingDistrict,
+									updatedOrder.shippingProvince,
+								].filter(Boolean);
+								const shippingAddress = addressParts.join(", ");
+								const items = (updatedOrder.orderItems || []).map((item) => {
+									const productImage = item.product?.image || "";
+									return {
+										name: item.product?.name || "Sản phẩm",
+										quantity: item.quantity || 1,
+										price: item.price || 0,
+										image: productImage,
+									};
+								});
+								const emailResult = await sendOrderCreatedEmail({
+									to: toEmail,
+									customerName,
+									ghnCode: ghnResult.data.order_code,
+									shippingFee: updatedOrder.shippingFee || 0,
+									totalPrice: updatedOrder.totalPrice || 0,
+									createdAt: updatedOrder.createdAt,
+									address: shippingAddress,
+									items,
+								});
+								if (emailResult?.skipped) {
+									// eslint-disable-next-line no-console
+									console.warn("[Email] Email skipped - SMTP not configured. Email should be sent to:", toEmail);
+								} else {
+									// eslint-disable-next-line no-console
+									console.log("[Email] Sent order created email to", toEmail, "for order", order.id);
+								}
+							}
+						} catch (mailErr) {
+							// eslint-disable-next-line no-console
+							console.error("[Email] Failed to send order created email:", mailErr?.message || mailErr);
+						}
+					}
 				}
 			} catch {}
 			return success(res, {
