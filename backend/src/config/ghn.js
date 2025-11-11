@@ -2,6 +2,13 @@ export default {
 	baseURL: process.env.GHN_BASE_URL || "https://dev-online-gateway.ghn.vn",
 	token: process.env.GHN_TOKEN,
 	shopId: process.env.GHN_SHOP_ID,
+	// Địa chỉ shop (nơi gửi hàng) - chỉ lấy từ .env
+	shopAddress: {
+		wardCode: process.env.GHN_SHOP_WARD_CODE,
+		districtId: process.env.GHN_SHOP_DISTRICT_ID ? parseInt(process.env.GHN_SHOP_DISTRICT_ID) : null,
+		provinceId: process.env.GHN_SHOP_PROVINCE_ID ? parseInt(process.env.GHN_SHOP_PROVINCE_ID) : null,
+		address: process.env.GHN_SHOP_ADDRESS,
+	},
 	returnAddress: {
 		name: process.env.GHN_RETURN_NAME || "TPE Store",
 		phone: process.env.GHN_RETURN_PHONE || "0123456789",

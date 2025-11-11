@@ -27,6 +27,16 @@ class GHNService {
 		this.shopId = process.env.GHN_SHOP_ID || "885";
 		this.timeout = 10000;
 		this.fallbackFee = 50000;
+		// Địa chỉ shop (nơi gửi hàng) - chỉ lấy từ .env
+		this.shopWardCode = process.env.GHN_SHOP_WARD_CODE;
+		this.shopDistrictId = process.env.GHN_SHOP_DISTRICT_ID ? parseInt(process.env.GHN_SHOP_DISTRICT_ID) : null;
+		this.shopProvinceId = process.env.GHN_SHOP_PROVINCE_ID ? parseInt(process.env.GHN_SHOP_PROVINCE_ID) : null;
+		
+		// Validate địa chỉ shop bắt buộc
+		if (!this.shopWardCode || !this.shopDistrictId) {
+			// eslint-disable-next-line no-console
+			console.warn("[GHN] Warning: Shop address not configured. Please set GHN_SHOP_WARD_CODE and GHN_SHOP_DISTRICT_ID in .env");
+		}
 	}
 
 	getHeaders() {
@@ -85,8 +95,16 @@ class GHNService {
 
 	async calculateShippingFee(data) {
 		try {
+			// Sử dụng fromDistrictId từ data nếu có, nếu không thì dùng shop address
+			const fromDistrictId = data.fromDistrictId ? parseInt(data.fromDistrictId) : this.shopDistrictId;
+			
+			// Validate shop address nếu dùng
+			if (!fromDistrictId && !this.shopDistrictId) {
+				throw new Error("Shop address chưa được cấu hình. Vui lòng set GHN_SHOP_DISTRICT_ID trong file .env");
+			}
+			
 			const payload = {
-				from_district_id: parseInt(data.fromDistrictId),
+				from_district_id: fromDistrictId || this.shopDistrictId,
 				to_district_id: parseInt(data.toDistrictId),
 				to_ward_code: data.toWardCode,
 				service_type_id: parseInt(data.serviceTypeId) || 2,
@@ -126,17 +144,22 @@ class GHNService {
 	}
 
 	async createShippingOrder(data) {
+		// Validate shop address đã được config
+		if (!this.shopWardCode || !this.shopDistrictId) {
+			throw new Error("Shop address chưa được cấu hình. Vui lòng set GHN_SHOP_WARD_CODE và GHN_SHOP_DISTRICT_ID trong file .env");
+		}
+		
 		let serviceId = parseInt(data.serviceId) || 53320;
 		try {
-			const services = await this.getServices(1442, parseInt(data.toDistrictId));
+			const services = await this.getServices(this.shopDistrictId, parseInt(data.toDistrictId));
 			if (services && services.data && services.data.length > 0) {
 				serviceId = services.data[0].service_id;
 			}
 		} catch {}
 		try {
 			const payload = {
-				from_district_id: 1442,
-				from_ward_code: "1A0101",
+				from_district_id: this.shopDistrictId,
+				from_ward_code: this.shopWardCode,
 				to_ward_code: data.toWardCode,
 				to_district_id: parseInt(data.toDistrictId),
 				weight: parseInt(data.weight) || 200,
@@ -178,6 +201,8 @@ class GHNService {
 			};
 			try {
 				const sample = {
+					from_district_id: payload.from_district_id,
+					from_ward_code: payload.from_ward_code,
 					to_ward_code: payload.to_ward_code,
 					to_district_id: payload.to_district_id,
 					service_type_id: payload.service_type_id,
@@ -190,6 +215,8 @@ class GHNService {
 				};
 				// eslint-disable-next-line no-console
 				console.log("[GHN][CreateOrder] Payload summary:", sample);
+				// eslint-disable-next-line no-console
+				console.log("[GHN][CreateOrder] Shop address - District:", this.shopDistrictId, "Ward:", this.shopWardCode);
 			} catch {}
 			const result = await httpRequest(
 				`${this.baseURL}/shiip/public-api/v2/shipping-order/create`,

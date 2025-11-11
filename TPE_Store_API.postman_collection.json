@@ -1,0 +1,393 @@
+{
+	"info": {
+		"_postman_id": "tpe-store-api-collection",
+		"name": "TPE Store API",
+		"description": "Collection để test API TPE Store, đặc biệt là tạo đơn hàng",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const jsonData = pm.response.json();",
+									"    if (jsonData.data && jsonData.data.token) {",
+									"        pm.environment.set(\"token\", jsonData.data.token);",
+									"        pm.environment.set(\"userId\", jsonData.data.user.id);",
+									"        console.log(\"Token saved to environment\");",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"your_password\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/login",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"login"
+							]
+						},
+						"description": "Đăng nhập để lấy JWT token. Token sẽ tự động được lưu vào environment variable."
+					}
+				},
+				{
+					"name": "Register",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"newuser@example.com\",\n  \"password\": \"password123\",\n  \"name\": \"New User\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/register",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"register"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Me",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/me",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"me"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Products",
+			"item": [
+				{
+					"name": "Get All Products",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/products",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"products"
+							]
+						},
+						"description": "Lấy danh sách tất cả sản phẩm để lấy productId"
+					}
+				},
+				{
+					"name": "Get Product By ID",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/products/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"products",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "product_id_here"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Orders",
+			"item": [
+				{
+					"name": "Create Order - COD",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"items\": [\n    {\n      \"productId\": \"clxxx123\",\n      \"quantity\": 2,\n      \"price\": 15000000\n    },\n    {\n      \"productId\": \"clyyy456\",\n      \"quantity\": 1,\n      \"price\": 5000000\n    }\n  ],\n  \"paymentMethod\": \"COD\",\n  \"shippingInfo\": {\n    \"name\": \"Nguyễn Văn A\",\n    \"phone\": \"0123456789\",\n    \"address\": \"123 Đường ABC\",\n    \"province\": \"79\",\n    \"district\": \"760\",\n    \"ward\": \"26734\",\n    \"provinceName\": \"Hồ Chí Minh\",\n    \"districtName\": \"Quận 1\",\n    \"wardName\": \"Phường Bến Nghé\",\n    \"shippingFee\": 30000\n  }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/orders",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"orders"
+							]
+						},
+						"description": "Tạo đơn hàng với phương thức thanh toán COD (Cash on Delivery)"
+					}
+				},
+				{
+					"name": "Create Order - ZaloPay",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"items\": [\n    {\n      \"productId\": \"clxxx123\",\n      \"quantity\": 1,\n      \"price\": 15000000\n    }\n  ],\n  \"paymentMethod\": \"ZALOPAY\",\n  \"shippingInfo\": {\n    \"name\": \"Nguyễn Văn A\",\n    \"phone\": \"0123456789\",\n    \"address\": \"123 Đường ABC\",\n    \"province\": \"79\",\n    \"provinceName\": \"Hồ Chí Minh\",\n    \"district\": \"760\",\n    \"districtName\": \"Quận 1\",\n    \"ward\": \"26734\",\n    \"wardName\": \"Phường Bến Nghé\",\n    \"shippingFee\": 30000\n  }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/orders",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"orders"
+							]
+						},
+						"description": "Tạo đơn hàng với phương thức thanh toán ZaloPay"
+					}
+				},
+				{
+					"name": "Get All Orders",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/orders",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"orders"
+							]
+						},
+						"description": "Lấy danh sách tất cả đơn hàng của user hiện tại"
+					}
+				},
+				{
+					"name": "Get Order By ID",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/orders/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"orders",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "order_id_here"
+								}
+							]
+						},
+						"description": "Lấy chi tiết đơn hàng theo ID"
+					}
+				},
+				{
+					"name": "Update Order Status",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"COMPLETED\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/orders/:id/status",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"orders",
+								":id",
+								"status"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "order_id_here"
+								}
+							]
+						},
+						"description": "Cập nhật trạng thái đơn hàng. Status hợp lệ: PENDING, PAID, SHIPPED, COMPLETED, CANCELLED"
+					}
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:4000",
+			"type": "string"
+		},
+		{
+			"key": "token",
+			"value": "",
+			"type": "string"
+		}
+	]
+}
+
