@@ -1,4 +1,5 @@
 import prisma from "../utils/prisma.js";
+import { generateId } from "../utils/generateId.js";
 
 export const findAllByUser = (userId) =>
 	prisma.address.findMany({
@@ -15,7 +16,10 @@ export const unsetDefaultForUser = (userId, excludeId) =>
 		data: { isDefault: false },
 	});
 
-export const create = (data) => prisma.address.create({ data });
+export const create = async (data) => {
+	const id = await generateId("ADD", "Address");
+	return prisma.address.create({ data: { ...data, id } });
+};
 
 export const updateById = (id, data) => prisma.address.update({ where: { id }, data });
 

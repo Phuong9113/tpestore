@@ -1,5 +1,6 @@
 import prisma from "../utils/prisma.js";
 import { validateRequired } from "../utils/helpers.js";
+import { generateId } from "../utils/generateId.js";
 
 export const getCart = async (userId) => {
 	const items = await prisma.cartItem.findMany({ where: { userId }, include: { product: true } });
@@ -44,7 +45,8 @@ export const addToCart = async (userId, { productId, quantity }) => {
 		const updated = await prisma.cartItem.update({ where: { id: existing.id }, data: { quantity: newQuantity } });
 		return { ok: true, itemId: updated.id };
 	}
-	const created = await prisma.cartItem.create({ data: { userId, productId, quantity: qty } });
+	const id = await generateId("CIT", "CartItem");
+	const created = await prisma.cartItem.create({ data: { id, userId, productId, quantity: qty } });
 	return { ok: true, itemId: created.id };
 };
 

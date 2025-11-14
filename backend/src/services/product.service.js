@@ -1,5 +1,6 @@
 import * as productRepo from "../repositories/product.repository.js";
 import prisma from "../utils/prisma.js";
+import { generateId } from "../utils/generateId.js";
 
 export const getAll = async () => {
 	return prisma.product.findMany({
@@ -123,8 +124,9 @@ export const createReview = async ({ productId, userId, rating, comment, orderId
 		}
 	}
 
+	const reviewId = await generateId("REV", "Review");
 	return prisma.review.create({
-		data: { productId, userId, rating, comment, orderId: orderId || null },
+		data: { id: reviewId, productId, userId, rating, comment, orderId: orderId || null },
 		include: { user: { select: { id: true, name: true } } },
 	});
 };
@@ -138,8 +140,10 @@ export const recordInteraction = async ({ productId, userId, action }) => {
 	}
 	let interaction = await prisma.productInteraction.findFirst({ where: { productId, userId } });
 	if (!interaction) {
+		const interactionId = await generateId("PIN", "ProductInteraction");
 		interaction = await prisma.productInteraction.create({
 			data: {
+				id: interactionId,
 				productId,
 				userId,
 				viewedAt: new Date(),

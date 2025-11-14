@@ -1,6 +1,7 @@
 import prisma from "../utils/prisma.js";
 import xlsx from "xlsx";
 import ghnService from "../services/ghn.service.js";
+import { generateId } from "../utils/generateId.js";
 
 // Users
 export const getAdminUsers = async (req, res, next) => {
@@ -168,15 +169,24 @@ export const createProduct = async (req, res, next) => {
 		const category = await prisma.category.findUnique({ where: { id: categoryId } });
 		if (!category) return res.status(400).json({ error: "Category not found" });
 		const resolvedStock = stock !== undefined && stock !== null && !Number.isNaN(Number(stock)) ? parseInt(stock) : inStock !== undefined ? (inStock ? 1 : 0) : 1;
+		const productId = await generateId("PRD", "Product");
+		const specValueIds = specs.length > 0 ? await Promise.all(specs.map(() => generateId("SPV", "SpecValue"))) : [];
 		const product = await prisma.product.create({
 			data: {
+				id: productId,
 				name,
 				description,
 				price: parseFloat(price),
 				image,
 				category: { connect: { id: categoryId } },
 				stock: resolvedStock,
-				specs: { create: specs.map((spec) => ({ specFieldId: spec.specFieldId, value: spec.value })) },
+				specs: { 
+					create: specs.map((spec, index) => ({ 
+						id: specValueIds[index],
+						specFieldId: spec.specFieldId, 
+						value: spec.value 
+					})) 
+				},
 			},
 			include: { category: true, specs: { include: { specField: true } } },
 		});
@@ -196,17 +206,28 @@ export const updateProduct = async (req, res, next) => {
 			const category = await prisma.category.findUnique({ where: { id: categoryId } });
 			if (!category) return res.status(400).json({ error: "Category not found" });
 		}
+		const updateData = {
+			...(name && { name }),
+			...(description !== undefined && { description }),
+			...(price !== undefined && { price: parseFloat(price) }),
+			...(image && { image }),
+			...(categoryId && { category: { connect: { id: categoryId } } }),
+			...((stock !== undefined && stock !== null && !Number.isNaN(Number(stock))) ? { stock: parseInt(stock) } : inStock !== undefined ? { stock: inStock ? 1 : 0 } : {}),
+		};
+		if (specs.length > 0) {
+			const specValueIds = await Promise.all(specs.map(() => generateId("SPV", "SpecValue")));
+			updateData.specs = {
+				deleteMany: {},
+				create: specs.map((spec, index) => ({ 
+					id: specValueIds[index], 
+					specFieldId: spec.specFieldId, 
+					value: spec.value 
+				}))
+			};
+		}
 		const product = await prisma.product.update({
 			where: { id },
-			data: {
-				...(name && { name }),
-				...(description !== undefined && { description }),
-				...(price !== undefined && { price: parseFloat(price) }),
-				...(image && { image }),
-				...(categoryId && { category: { connect: { id: categoryId } } }),
-				...((stock !== undefined && stock !== null && !Number.isNaN(Number(stock))) ? { stock: parseInt(stock) } : inStock !== undefined ? { stock: inStock ? 1 : 0 } : {}),
-				...(specs.length > 0 ? { specs: { deleteMany: {}, create: specs.map((spec) => ({ specFieldId: spec.specFieldId, value: spec.value })) } } : {}),
-			},
+			data: updateData,
 			include: { category: true, specs: { include: { specField: true } } },
 		});
 		res.json(product);
@@ -293,15 +314,24 @@ export const importProductsFromExcel = async (req, res, next) => {
 				results.push({ name, ok: false, error: `Missing required spec ${missingRequired}` });
 				continue;
 			}
+			const productId = await generateId("PRD", "Product");
+			const specValueIds = specValues.length > 0 ? await Promise.all(specValues.map(() => generateId("SPV", "SpecValue"))) : [];
 			const created = await prisma.product.create({
 				data: {
+					id: productId,
 					name,
 					description,
 					price,
 					stock,
 					image,
 					category: { connect: { id: categoryId } },
-					specs: { create: specValues.map((sv) => ({ specFieldId: sv.specFieldId, value: sv.value })) },
+					specs: { 
+						create: specValues.map((sv, index) => ({ 
+							id: specValueIds[index],
+							specFieldId: sv.specFieldId, 
+							value: sv.value 
+						})) 
+					},
 				},
 				include: { category: true, specs: { include: { specField: true } } },
 			});
@@ -346,8 +376,23 @@ export const createCategory = async (req, res, next) => {
 		if (!name) return res.status(400).json({ error: "Missing name" });
 		const existing = await prisma.category.findFirst({ where: { name: { equals: name, mode: "insensitive" } } });
 		if (existing) return res.status(409).json({ error: "Category name already exists" });
+		const categoryId = await generateId("CAT", "Category");
+		const specFieldIds = await Promise.all(specFields.map(() => generateId("SPF", "SpecField")));
 		const category = await prisma.category.create({
-			data: { name, description, image, specFields: { create: specFields.map((f) => ({ name: f.name, type: f.type || "TEXT", required: f.required || false })) } },
+			data: { 
+				id: categoryId,
+				name, 
+				description, 
+				image, 
+				specFields: { 
+					create: specFields.map((f, index) => ({ 
+						id: specFieldIds[index],
+						name: f.name, 
+						type: f.type || "TEXT", 
+						required: f.required || false 
+					})) 
+				} 
+			},
 			include: { specFields: true },
 		});
 		res.status(201).json(category);
@@ -369,7 +414,16 @@ export const updateCategory = async (req, res, next) => {
 		await prisma.category.update({ where: { id }, data: { ...(name && { name }), ...(description !== undefined && { description }), ...(image && { image }) } });
 		if (specFields.length > 0) {
 			await prisma.specField.deleteMany({ where: { categoryId: id } });
-			await prisma.specField.createMany({ data: specFields.map((f) => ({ categoryId: id, name: f.name, type: f.type || "TEXT", required: f.required || false })) });
+			const specFieldIds = await Promise.all(specFields.map(() => generateId("SPF", "SpecField")));
+			await prisma.specField.createMany({ 
+				data: specFields.map((f, index) => ({ 
+					id: specFieldIds[index],
+					categoryId: id, 
+					name: f.name, 
+					type: f.type || "TEXT", 
+					required: f.required || false 
+				})) 
+			});
 		}
 		const updated = await prisma.category.findUnique({ where: { id }, include: { specFields: true } });
 		res.json(updated);

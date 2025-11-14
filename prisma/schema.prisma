@@ -8,7 +8,7 @@ datasource db {
 }
 
 model User {
-  id           String               @id @default(cuid())
+  id           String               @id
   name         String?
   email        String               @unique
   password     String
@@ -29,7 +29,7 @@ model User {
 }
 
 model Address {
-  id             String   @id @default(cuid())
+  id             String   @id
   userId         String
   name           String
   phone          String
@@ -48,7 +48,7 @@ model Address {
 }
 
 model Category {
-  id          String      @id @default(cuid())
+  id          String      @id
   name        String
   description String?
   image       String?
@@ -58,7 +58,7 @@ model Category {
 }
 
 model SpecField {
-  id         String      @id @default(cuid())
+  id         String      @id
   name       String
   type       String      @default("TEXT")
   required   Boolean     @default(false)
@@ -69,7 +69,7 @@ model SpecField {
 }
 
 model Product {
-  id           String               @id @default(cuid())
+  id           String               @id
   name         String
   description  String
   price        Float
@@ -87,7 +87,7 @@ model Product {
 }
 
 model SpecValue {
-  id          String    @id @default(cuid())
+  id          String    @id
   productId   String
   specFieldId String
   value       String
@@ -96,7 +96,7 @@ model SpecValue {
 }
 
 model CartItem {
-  id        String   @id @default(cuid())
+  id        String   @id
   userId    String
   productId String
   quantity  Int
@@ -106,7 +106,7 @@ model CartItem {
 }
 
 model Order {
-  id               String        @id @default(cuid())
+  id               String        @id
   userId           String
   totalPrice       Float
   status           OrderStatus   @default(PENDING)
@@ -130,7 +130,7 @@ model Order {
 }
 
 model OrderItem {
-  id        String  @id @default(cuid())
+  id        String  @id
   orderId   String
   productId String
   quantity  Int
@@ -140,7 +140,7 @@ model OrderItem {
 }
 
 model Review {
-  id        String   @id @default(cuid())
+  id        String   @id
   productId String
   userId    String
   orderId   String?
@@ -153,7 +153,7 @@ model Review {
 }
 
 model ProductInteraction {
-  id          String   @id @default(cuid())
+  id          String   @id
   userId      String
   productId   String
   viewedAt    DateTime @default(now())

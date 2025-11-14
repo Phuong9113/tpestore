@@ -1,5 +1,6 @@
 import prisma from "../utils/prisma.js";
 import { validateRequired } from "../utils/helpers.js";
+import { generateId } from "../utils/generateId.js";
 
 export const listForUser = (userId) =>
 	prisma.order.findMany({
@@ -59,8 +60,11 @@ export const create = async (userId, body) => {
 	const totalPrice = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
 	const shippingFee = shippingInfo?.shippingFee || 0;
 	const finalTotal = totalPrice + shippingFee;
+	const orderId = await generateId("ORD", "Order");
+	const orderItemIds = await Promise.all(items.map(() => generateId("OIT", "OrderItem")));
 	const order = await prisma.order.create({
 		data: {
+			id: orderId,
 			userId,
 			totalPrice: finalTotal,
 			status: paymentMethod === "ZALOPAY" ? "PENDING" : "PROCESSING",
@@ -73,7 +77,14 @@ export const create = async (userId, body) => {
 			shippingDistrict: shippingInfo?.district || shippingInfo?.districtName,
 			shippingWard: shippingInfo?.ward || shippingInfo?.wardName,
 			shippingFee,
-			orderItems: { create: items.map((it) => ({ productId: it.productId, quantity: it.quantity, price: it.price })) },
+			orderItems: { 
+				create: items.map((it, index) => ({ 
+					id: orderItemIds[index],
+					productId: it.productId, 
+					quantity: it.quantity, 
+					price: it.price 
+				})) 
+			},
 		},
 		include: { orderItems: { include: { product: { select: { id: true, name: true, image: true, price: true } } } } },
 	});
