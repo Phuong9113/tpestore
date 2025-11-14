@@ -24,8 +24,10 @@ export const getProductById = async (req, res, next) => {
 
 export const getProductReviews = async (req, res, next) => {
 	try {
-		const reviews = await productService.getReviews(req.params.productId);
-		success(res, reviews);
+		const page = parseInt(req.query.page) || 1;
+		const limit = parseInt(req.query.limit) || 10;
+		const result = await productService.getReviews(req.params.productId, page, limit);
+		success(res, result);
 	} catch (err) {
 		next(err);
 	}
@@ -38,6 +40,7 @@ export const createProductReview = async (req, res, next) => {
 			userId: req.user.id,
 			rating: req.body.rating,
 			comment: req.body.comment,
+			orderId: req.body.orderId,
 		});
 		success(res, review, "Created", 201);
 	} catch (err) {
@@ -62,6 +65,20 @@ export const getRecommendations = async (req, res, next) => {
 	try {
 		const products = await productService.getRecommendations(req.user.id);
 		success(res, products);
+	} catch (err) {
+		next(err);
+	}
+};
+
+export const checkUserPurchasedProduct = async (req, res, next) => {
+	try {
+		const orderId = req.query.orderId || null;
+		const result = await productService.checkUserPurchasedProduct(
+			req.params.productId,
+			req.user.id,
+			orderId
+		);
+		success(res, result);
 	} catch (err) {
 		next(err);
 	}

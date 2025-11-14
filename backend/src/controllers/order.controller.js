@@ -36,3 +36,21 @@ export const updateOrderStatus = async (req, res, next) => {
 		next(err);
 	}
 };
+
+export const getReviewEligibility = async (req, res, next) => {
+	try {
+		const data = await orderService.getReviewEligibility(req.params.id, req.user.id);
+		success(res, data);
+	} catch (err) {
+		next(err);
+	}
+};
+
+export const getOrderProductsReviewStatus = async (req, res, next) => {
+	try {
+		const data = await orderService.getOrderProductsReviewStatus(req.params.id, req.user.id);
+		success(res, data);
+	} catch (err) {
+		next(err);
+	}
+};

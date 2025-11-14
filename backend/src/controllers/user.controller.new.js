@@ -1,27 +1,5 @@
 import prisma from "../utils/prisma.js";
 import { success } from "../utils/response.js";
-import ghnService from "../services/ghn.service.js";
-
-export const getUsers = async (req, res, next) => {
-	try {
-		const users = await prisma.user.findMany({
-			select: {
-				id: true,
-				name: true,
-				email: true,
-				phone: true,
-				address: true,
-				city: true,
-				role: true,
-				isActive: true,
-				createdAt: true,
-			},
-		});
-		success(res, users);
-	} catch (err) {
-		next(err);
-	}
-};
 
 // Helper function to sanitize strings - remove null bytes and control characters
 const sanitizeString = (str) => {
@@ -196,71 +174,6 @@ export const getProfile = async (req, res, next) => {
 		success(res, user);
 	} catch (err) {
 		console.error('getProfile error:', err);
-		next(err);
-	}
-};
-
-export const cancelUserOrder = async (req, res, next) => {
-	try {
-		const userId = req.user.id;
-		const { orderId } = req.params;
-
-		const order = await prisma.order.findFirst({
-			where: {
-				id: orderId,
-				userId: userId,
-			},
-			include: {
-				orderItems: true,
-			},
-		});
-
-		if (!order) {
-			return res.status(404).json({ error: "Đơn hàng không tồn tại hoặc không thuộc về bạn" });
-		}
-
-		if (order.status === "CANCELLED") {
-			return res.status(400).json({ error: "Đơn hàng đã được hủy trước đó" });
-		}
-
-		if (order.status === "COMPLETED") {
-			return res.status(400).json({ error: "Không thể hủy đơn hàng đã hoàn thành" });
-		}
-
-		if (order.status === "SHIPPING") {
-			return res.status(400).json({ error: "Không thể hủy đơn hàng đang vận chuyển" });
-		}
-
-		// Check if order is within 24 hours
-		const orderDate = new Date(order.createdAt);
-		const now = new Date();
-		const hoursDiff = (now - orderDate) / (1000 * 60 * 60);
-		if (hoursDiff > 24) {
-			return res.status(400).json({ error: "Chỉ có thể hủy đơn hàng trong vòng 24 giờ đầu" });
-		}
-
-		// Cancel on GHN if order code exists
-		let ghnResult = null;
-		if (order.ghnOrderCode) {
-			try {
-				ghnResult = await ghnService.cancelOrder(order.ghnOrderCode);
-			} catch (ghnError) {
-				ghnResult = { success: false, error: ghnError.message, message: "Lỗi khi hủy đơn hàng trên GHN" };
-			}
-		}
-
-		// Update order status
-		const updatedOrder = await prisma.order.update({
-			where: { id: orderId },
-			data: { status: "CANCELLED" },
-		});
-
-		success(res, {
-			order: updatedOrder,
-			ghnResult: ghnResult,
-			message: "Đơn hàng đã được hủy thành công",
-		});
-	} catch (err) {
 		next(err);
 	}
 };

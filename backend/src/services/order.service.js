@@ -100,3 +100,128 @@ export const updateStatusForUser = async (id, userId, status) => {
 		include: { orderItems: { include: { product: { select: { id: true, name: true, image: true, price: true } } } } },
 	});
 };
+
+export const getReviewEligibility = async (orderId, userId) => {
+	const order = await prisma.order.findFirst({
+		where: { id: orderId, userId },
+		include: {
+			orderItems: {
+				include: {
+					product: { select: { id: true, name: true, image: true } },
+				},
+			},
+		},
+	});
+
+	if (!order) {
+		const err = new Error("Order not found");
+		err.status = 404;
+		throw err;
+	}
+
+	// Check if order is completed or delivered
+	const isCompleted = order.status === "COMPLETED";
+	let isDelivered = false;
+
+	if (order.ghnOrderCode) {
+		try {
+			const ghnService = (await import("./ghn.service.js")).default;
+			const ghnDetail = await ghnService.getOrderDetail(order.ghnOrderCode);
+			const currentStatus = ghnDetail?.currentStatus || ghnDetail?.status || "";
+			isDelivered = currentStatus.toLowerCase() === "delivered";
+		} catch (e) {
+			// If GHN check fails, rely on internal status
+		}
+	}
+
+	const canReview = isCompleted || isDelivered;
+
+	// Get existing reviews for products in this order
+	const productIds = order.orderItems.map((item) => item.productId);
+	const existingReviews = await prisma.review.findMany({
+		where: {
+			productId: { in: productIds },
+			userId,
+			orderId,
+		},
+		select: { productId: true },
+	});
+
+	const reviewedProductIds = new Set(existingReviews.map((r) => r.productId));
+
+	// Map order items with review status
+	const itemsWithReviewStatus = order.orderItems.map((item) => ({
+		...item,
+		canReview: canReview && !reviewedProductIds.has(item.productId),
+		hasReviewed: reviewedProductIds.has(item.productId),
+	}));
+
+	return {
+		orderId: order.id,
+		canReview,
+		isCompleted,
+		isDelivered,
+		items: itemsWithReviewStatus,
+	};
+};
+
+export const getOrderProductsReviewStatus = async (orderId, userId) => {
+	const order = await prisma.order.findFirst({
+		where: { id: orderId, userId },
+		include: {
+			orderItems: {
+				include: {
+					product: { select: { id: true, name: true, image: true } },
+				},
+			},
+		},
+	});
+
+	if (!order) {
+		const err = new Error("Order not found");
+		err.status = 404;
+		throw err;
+	}
+
+	// Check if order is completed or delivered
+	const isCompleted = order.status === "COMPLETED";
+	let isDelivered = false;
+
+	if (order.ghnOrderCode) {
+		try {
+			const ghnService = (await import("./ghn.service.js")).default;
+			const ghnDetail = await ghnService.getOrderDetail(order.ghnOrderCode);
+			const currentStatus = ghnDetail?.currentStatus || ghnDetail?.status || "";
+			isDelivered = currentStatus.toLowerCase() === "delivered";
+		} catch (e) {
+			// If GHN check fails, rely on internal status
+		}
+	}
+
+	const canReview = isCompleted || isDelivered;
+
+	// Get existing reviews for products in this order
+	const productIds = order.orderItems.map((item) => item.productId);
+	const existingReviews = await prisma.review.findMany({
+		where: {
+			productId: { in: productIds },
+			userId,
+		},
+		select: { productId: true },
+	});
+
+	const reviewedProductIds = new Set(existingReviews.map((r) => r.productId));
+
+	// Map order items with review status
+	const productsReviewStatus = order.orderItems.map((item) => ({
+		productId: item.productId,
+		hasReviewed: reviewedProductIds.has(item.productId),
+	}));
+
+	return {
+		orderId: order.id,
+		canReview,
+		isDelivered,
+		products: productsReviewStatus,
+	};
+};

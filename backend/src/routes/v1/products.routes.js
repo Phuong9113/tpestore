@@ -6,6 +6,7 @@ import {
 	createProductReview,
 	interactWithProduct,
 	getRecommendations,
+	checkUserPurchasedProduct,
 } from "../../controllers/product.controller.js";
 import { authenticate } from "../../middleware/auth.js";
 
@@ -20,5 +21,6 @@ router.get("/:productId/reviews", getProductReviews);
 router.post("/:productId/reviews", authenticate, createProductReview);
 router.post("/:productId/interact", authenticate, interactWithProduct);
 router.get("/recommendations", authenticate, getRecommendations);
+router.get("/:productId/purchase-status", authenticate, checkUserPurchasedProduct);
 
 export default router;

@@ -9,6 +9,8 @@ import {
 import { Button } from "@/components/ui/button";
 import ProductCard from "@/components/ProductCard";
 import AddToCartButton from "@/components/AddToCartButton";
+import ProductReviews from "@/components/ProductReviews";
+import ProductReviewForm from "@/components/ProductReviewForm";
 import { fetchProductById, fetchProducts, type UiProduct } from "@/lib/api";
 
 export async function generateStaticParams() {
@@ -22,10 +24,13 @@ export async function generateStaticParams() {
 
 export default async function ProductDetailPage({
   params,
+  searchParams,
 }: {
   params: { id: string };
+  searchParams: { orderId?: string };
 }) {
   const product = await fetchProductById(params.id);
+  const orderId = searchParams?.orderId;
 
   if (!product) {
     notFound();
@@ -265,6 +270,12 @@ export default async function ProductDetailPage({
             </div>
           </div>
         )}
+
+        {/* Product Review Form - Only show if user has purchased */}
+        <ProductReviewForm productId={product.id} orderId={orderId} />
+
+        {/* Product Reviews */}
+        <ProductReviews productId={product.id} />
 
         {/* Related Products */}
         {relatedProducts.length > 0 && (

@@ -367,23 +367,52 @@ export async function deleteUser(id: string): Promise<void> {
 }
 
 // User Profile API
-export async function fetchUserProfile(): Promise<AdminUser> {
-  const res = await fetch(`${API_BASE}/users/profile`, {
-    headers: getAuthHeaders(),
+export async function fetchUserProfile(forceRefresh = false): Promise<AdminUser> {
+  const headers = getAuthHeaders();
+  // Add cache-busting if force refresh
+  const url = forceRefresh 
+    ? `${API_BASE}/users/profile?t=${Date.now()}`
+    : `${API_BASE}/users/profile`;
+  const res = await fetch(url, {
+    headers,
+    cache: forceRefresh ? 'no-store' : 'default',
   });
   if (!res.ok) throw new Error(`Failed to fetch user profile: ${res.status}`);
   const json = await res.json();
-  return json?.data ?? json;
+  console.log('fetchUserProfile response:', json);
+  const data = json?.data ?? json;
+  console.log('fetchUserProfile parsed data:', data);
+  return data;
 }
 
 export async function updateUserProfile(userData: Partial<AdminUser>): Promise<AdminUser> {
-  const res = await fetch(`${API_BASE}/users/profile`, {
-    method: 'PUT',
-    headers: getAuthHeaders(),
-    body: JSON.stringify(userData),
-  });
-  if (!res.ok) throw new Error(`Failed to update user profile: ${res.status}`);
-  return await res.json();
+  console.log('updateUserProfile - calling API with:', userData);
+  console.log('updateUserProfile - API URL:', `${API_BASE}/users/profile`);
+  console.log('updateUserProfile - Method: PUT');
+  
+  try {
+    const res = await fetch(`${API_BASE}/users/profile`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(userData),
+    });
+    
+    console.log('updateUserProfile - Response status:', res.status);
+    console.log('updateUserProfile - Response ok:', res.ok);
+    
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      console.error('updateUserProfile - Error response:', errorData);
+      const errorMessage = errorData.message || errorData.error || `Failed to update user profile: ${res.status}`;
+      throw new Error(errorMessage);
+    }
+    const json = await res.json();
+    console.log('updateUserProfile - Success response:', json);
+    return json?.data ?? json;
+  } catch (error) {
+    console.error('updateUserProfile - Fetch error:', error);
+    throw error;
+  }
 }
 
 // Order cancellation APIs
@@ -606,6 +635,151 @@ export async function fetchSalesByRegion(): Promise<SalesByRegion> {
   });
   if (!res.ok) throw new Error(`Failed to fetch sales by region: ${res.status}`);
   return await res.json();
+}
+
+// Review APIs
+export interface Review {
+  id: string;
+  productId: string;
+  userId: string;
+  orderId?: string;
+  rating: number;
+  comment: string;
+  createdAt: string;
+  user: {
+    id: string;
+    name: string | null;
+  };
+}
+
+export interface ReviewEligibility {
+  orderId: string;
+  canReview: boolean;
+  isCompleted: boolean;
+  isDelivered: boolean;
+  items: Array<{
+    id: string;
+    productId: string;
+    quantity: number;
+    price: number;
+    canReview: boolean;
+    hasReviewed: boolean;
+    product: {
+      id: string;
+      name: string;
+      image: string;
+    };
+  }>;
+}
+
+export interface ReviewsResponse {
+  reviews: Review[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+  averageRating: number;
+}
+
+export async function getReviewEligibility(orderId: string): Promise<ReviewEligibility> {
+  const res = await fetch(`${API_BASE}/orders/${orderId}/review-eligibility`, {
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) throw new Error(`Failed to fetch review eligibility: ${res.status}`);
+  const json = await res.json();
+  return json?.data ?? json;
+}
+
+export async function createReview(productId: string, data: {
+  rating: number;
+  comment: string;
+  orderId?: string;
+}): Promise<Review> {
+  const res = await fetch(`${API_BASE}/products/${productId}/reviews`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.message || `Failed to create review: ${res.status}`);
+  }
+  const json = await res.json();
+  return json?.data ?? json;
+}
+
+export async function getProductReviews(productId: string, page: number = 1, limit: number = 10): Promise<ReviewsResponse> {
+  const res = await fetch(`${API_BASE}/products/${productId}/reviews?page=${page}&limit=${limit}`, {
+    cache: 'no-store',
+  });
+  if (!res.ok) throw new Error(`Failed to fetch reviews: ${res.status}`);
+  const json = await res.json();
+  return json?.data ?? json;
+}
+
+export interface PurchaseStatus {
+  hasPurchased: boolean;
+  canReview: boolean;
+  hasReviewed: boolean;
+  reviewId: string | null;
+  orders: Array<{
+    orderId: string;
+    status: string;
+    isDelivered: boolean;
+  }>;
+}
+
+export async function checkUserPurchasedProduct(productId: string, orderId?: string): Promise<PurchaseStatus> {
+  try {
+    const url = orderId 
+      ? `${API_BASE}/products/${productId}/purchase-status?orderId=${orderId}`
+      : `${API_BASE}/products/${productId}/purchase-status`;
+    const res = await fetch(url, {
+      headers: getAuthHeaders(),
+    });
+    if (!res.ok) {
+      // Return default status instead of throwing - backend should handle errors gracefully
+      return {
+        hasPurchased: false,
+        canReview: false,
+        hasReviewed: false,
+        reviewId: null,
+        orders: [],
+      };
+    }
+    const json = await res.json();
+    return json?.data ?? json;
+  } catch (error) {
+    // Network or other errors - return safe default
+    return {
+      hasPurchased: false,
+      canReview: false,
+      hasReviewed: false,
+      reviewId: null,
+      orders: [],
+    };
+  }
+}
+
+export interface OrderProductsReviewStatus {
+  orderId: string;
+  canReview: boolean;
+  isDelivered: boolean;
+  products: Array<{
+    productId: string;
+    hasReviewed: boolean;
+  }>;
+}
+
+export async function getOrderProductsReviewStatus(orderId: string): Promise<OrderProductsReviewStatus> {
+  const res = await fetch(`${API_BASE}/orders/${orderId}/products-review-status`, {
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) throw new Error(`Failed to get review status: ${res.status}`);
+  const json = await res.json();
+  return json?.data ?? json;
 }
 
 // API Client object for easy usage in components

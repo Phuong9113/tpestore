@@ -39,6 +39,8 @@ import { toast } from "sonner"
 import Image from "next/image"
 import ProtectedRoute from "@/components/ProtectedRoute"
 import { resolveStatusLabel } from "@/lib/shipping-status"
+import { useRouter } from "next/navigation"
+import { getOrderProductsReviewStatus, type OrderProductsReviewStatus } from "@/lib/api"
 
 interface UserProfile {
   name: string
@@ -55,6 +57,15 @@ interface Order {
   status: "Đang xử lý" | "Đang giao" | "Đã giao" | "Đã hủy" | "Đã thanh toán"
   items: number
   ghnOrderCode?: string
+  orderItems?: Array<{
+    id: string
+    productId: string
+    product: {
+      id: string
+      name: string
+      image: string
+    }
+  }>
 }
 
 // Address interface is now imported from api.ts
@@ -101,6 +112,7 @@ interface District { DistrictID: number; DistrictName: string }
 interface Ward { WardCode: string; WardName: string }
 
 function ProfilePageContent() {
+  const router = useRouter()
   const [activeTab, setActiveTab] = useState<TabType>("profile")
   const [isEditing, setIsEditing] = useState(false)
   const [authUser, setAuthUser] = useState<AuthUser | null>(null)
@@ -122,23 +134,46 @@ function ProfilePageContent() {
         // Fetch detailed profile from API
         const userData = await fetchUserProfile()
         
-        setProfile({
+        // Parse birthDate
+        let parsedBirthDate = ""
+        if (userData.birthDate) {
+          if (typeof userData.birthDate === 'string') {
+            parsedBirthDate = userData.birthDate.includes('T') 
+              ? userData.birthDate.split('T')[0]
+              : userData.birthDate
+          } else {
+            parsedBirthDate = new Date(userData.birthDate).toISOString().split('T')[0]
+          }
+        }
+        
+        // Create profile data
+        const profileData: UserProfile = {
           name: userData.name || "",
           email: userData.email || "",
           phone: userData.phone || "",
-          birthDate: (userData.birthDate as string) || "",
-          gender: (userData.gender as any) || undefined,
-        })
+          birthDate: parsedBirthDate,
+          gender: (userData.gender && ['Nam', 'Nữ', 'Khác'].includes(userData.gender)) 
+            ? userData.gender as 'Nam' | 'Nữ' | 'Khác' 
+            : undefined,
+        }
+        
+        // Set state
+        setProfile(profileData)
+        setEditedProfile(profileData)
       } catch (error) {
         console.error('Error fetching profile:', error)
         // Fallback to auth user data
         const u = await me()
         if (u) {
-          setProfile((prev) => ({
-            ...prev,
+          const fallbackData = {
             name: u.name || "",
             email: u.email,
-          }))
+            phone: "",
+            birthDate: "",
+            gender: undefined,
+          }
+          setProfile(fallbackData)
+          setEditedProfile(fallbackData)
         }
       } finally {
         setLoading(false)
@@ -151,9 +186,11 @@ function ProfilePageContent() {
   // When entering edit mode, preload current profile values so user doesn't need to retype unchanged fields
   useEffect(() => {
     if (isEditing) {
+      console.log('Entering edit mode, setting editedProfile to:', profile)
       setEditedProfile(profile)
     }
   }, [isEditing, profile])
+  
 
   // Real order history from API
   const [orders, setOrders] = useState<Order[]>([])
@@ -164,6 +201,8 @@ function ProfilePageContent() {
   // Map GHN order code -> last normalized payload snapshot (for debugging)
   const [ghnDebug, setGhnDebug] = useState<Record<string, { currentStatus?: string; status?: string; logs?: number }>>({})
   const [addresses, setAddresses] = useState<AddressType[]>([])
+  // Map order ID -> review status for products
+  const [ordersReviewStatus, setOrdersReviewStatus] = useState<Record<string, OrderProductsReviewStatus>>({})
   // Pagination for addresses
   const [addressesPage, setAddressesPage] = useState(1)
   const ADDRESSES_PAGE_SIZE = 4
@@ -190,10 +229,30 @@ function ProfilePageContent() {
                   order.status === 'COMPLETED' ? 'Đã giao' :
                   order.status === 'CANCELLED' ? 'Đã hủy' : 'Đang xử lý',
           items: order.orderItems?.length || 0,
-          ghnOrderCode: order.ghnOrderCode
+          ghnOrderCode: order.ghnOrderCode,
+          orderItems: order.orderItems || []
         })) || []
         
         setOrders(userOrders)
+
+        // Fetch review status for delivered orders
+        const deliveredOrders = userOrders.filter(
+          (o) => o.status === 'Đã giao' || o.ghnOrderCode
+        )
+        if (deliveredOrders.length > 0) {
+          const statusMap: Record<string, OrderProductsReviewStatus> = {}
+          await Promise.all(
+            deliveredOrders.map(async (order) => {
+              try {
+                const status = await getOrderProductsReviewStatus(order.id)
+                statusMap[order.id] = status
+              } catch (error) {
+                console.error(`Error fetching review status for order ${order.id}:`, error)
+              }
+            })
+          )
+          setOrdersReviewStatus(statusMap)
+        }
       } catch (error) {
         console.error('Error fetching orders:', error)
         setOrders([])
@@ -693,20 +752,29 @@ function ProfilePageContent() {
 
   // Helpers for date formatting
   const toDateInputValue = (val?: string) => {
-    const v = (val || "").trim()
+    if (!val) return ""
+    const v = val.trim()
     if (!v) return ""
-    // If already yyyy-mm-dd
+    // If already yyyy-mm-dd format
     if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v
+    // If contains T (ISO format), extract date part
+    if (v.includes('T')) {
+      return v.split('T')[0]
+    }
     // If dd/mm/yyyy -> convert to yyyy-mm-dd
     const m = v.match(/^(\d{2})\/(\d{2})\/(\d{4})$/)
     if (m) return `${m[3]}-${m[2]}-${m[1]}`
     // Fallback: try Date parse
-    const d = new Date(v)
-    if (!isNaN(d.getTime())) {
-      const yyyy = d.getFullYear()
-      const mm = String(d.getMonth() + 1).padStart(2, '0')
-      const dd = String(d.getDate()).padStart(2, '0')
-      return `${yyyy}-${mm}-${dd}`
+    try {
+      const d = new Date(v)
+      if (!isNaN(d.getTime())) {
+        const yyyy = d.getFullYear()
+        const mm = String(d.getMonth() + 1).padStart(2, '0')
+        const dd = String(d.getDate()).padStart(2, '0')
+        return `${yyyy}-${mm}-${dd}`
+      }
+    } catch (e) {
+      console.error('Error parsing date:', e, 'value:', v)
     }
     return ""
   }
@@ -760,32 +828,80 @@ function ProfilePageContent() {
       setSaving(true)
       setSaveError("")
       
+      // Prepare update data - clean and simple
+      const updateData: any = {
+        name: editedProfile.name?.trim() || null,
+        phone: editedProfile.phone?.trim() || null,
+        birthDate: editedProfile.birthDate?.trim() || null,
+        gender: editedProfile.gender || null,
+      }
+      
       // Update profile via API
-      const updatedUser = await updateUserProfile({
-        name: editedProfile.name,
-        phone: editedProfile.phone,
-        birthDate: editedProfile.birthDate,
-        gender: editedProfile.gender,
-      })
-      const u = (updatedUser as any)?.data ?? updatedUser
-      setProfile({
-        name: u?.name || "",
-        email: u?.email || "",
-        phone: u?.phone || "",
-        birthDate: (u as any)?.birthDate || editedProfile.birthDate || "",
-        gender: (u as any)?.gender || editedProfile.gender,
-      })
-      setEditedProfile({
-        name: u?.name || "",
-        email: u?.email || profile.email || "",
-        phone: u?.phone || "",
-        birthDate: (u as any)?.birthDate || editedProfile.birthDate || "",
-        gender: (u as any)?.gender || editedProfile.gender,
-      })
+      const updatedUser = await updateUserProfile(updateData)
+      const userData = (updatedUser as any)?.data ?? updatedUser
+      
+      // Parse response data
+      let formattedBirthDate = ""
+      if (userData?.birthDate) {
+        if (typeof userData.birthDate === 'string') {
+          formattedBirthDate = userData.birthDate.split('T')[0]
+        } else {
+          formattedBirthDate = new Date(userData.birthDate).toISOString().split('T')[0]
+        }
+      }
+      
+      const updatedProfile: UserProfile = {
+        name: userData?.name || "",
+        email: userData?.email || profile.email || "",
+        phone: userData?.phone || "",
+        birthDate: formattedBirthDate,
+        gender: (userData?.gender && ['Nam', 'Nữ', 'Khác'].includes(userData.gender)) 
+          ? userData.gender as 'Nam' | 'Nữ' | 'Khác' 
+          : undefined,
+      }
+      
+      // Update state
+      setProfile(updatedProfile)
+      setEditedProfile(updatedProfile)
       setIsEditing(false)
-    } catch (e) {
-      setSaveError("Cập nhật thất bại")
-      console.error('Error updating profile:', e)
+      
+      // Refresh from server to ensure consistency
+      try {
+        const refreshedData = await fetchUserProfile(true)
+        
+        // Parse refreshed data
+        let parsedBirthDate = ""
+        if (refreshedData.birthDate) {
+          if (typeof refreshedData.birthDate === 'string') {
+            parsedBirthDate = refreshedData.birthDate.includes('T') 
+              ? refreshedData.birthDate.split('T')[0]
+              : refreshedData.birthDate
+          } else {
+            parsedBirthDate = new Date(refreshedData.birthDate).toISOString().split('T')[0]
+          }
+        }
+        
+        const refreshedProfile: UserProfile = {
+          name: refreshedData.name || "",
+          email: refreshedData.email || "",
+          phone: refreshedData.phone || "",
+          birthDate: parsedBirthDate,
+          gender: (refreshedData.gender && ['Nam', 'Nữ', 'Khác'].includes(refreshedData.gender)) 
+            ? refreshedData.gender as 'Nam' | 'Nữ' | 'Khác' 
+            : undefined,
+        }
+        
+        setProfile(refreshedProfile)
+        setEditedProfile(refreshedProfile)
+      } catch (refreshError) {
+        console.error('Error refreshing profile:', refreshError)
+      }
+      
+      toast.success("Cập nhật thông tin thành công!")
+    } catch (e: any) {
+      const errorMessage = e?.message || "Cập nhật thất bại"
+      setSaveError(errorMessage)
+      toast.error(errorMessage)
     } finally {
       setSaving(false)
     }
@@ -944,6 +1060,17 @@ function ProfilePageContent() {
                         <p className="text-lg font-semibold text-foreground mt-2">
                           {item.price.toLocaleString("vi-VN")}₫
                         </p>
+                        {/* Link to product page for review */}
+                        {(selectedOrder.status === 'Đã giao') && (
+                          <div className="mt-3">
+                            <button
+                              onClick={() => router.push(`/products/${item.id}?orderId=${selectedOrder.id}`)}
+                              className="text-sm text-green-600 hover:underline font-medium"
+                            >
+                              Đánh giá sản phẩm →
+                            </button>
+                          </div>
+                        )}
                       </div>
                       <div className="text-right">
                         <p className="text-lg font-bold text-foreground">
@@ -1131,7 +1258,11 @@ function ProfilePageContent() {
                         Hủy
                       </button>
                       <button
-                        onClick={handleSave}
+                        onClick={(e) => {
+                          console.log('Save button clicked!', e);
+                          e.preventDefault();
+                          handleSave();
+                        }}
                         disabled={saving}
                         className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-60"
                       >
@@ -1150,7 +1281,7 @@ function ProfilePageContent() {
                     <label className="block text-sm font-medium text-foreground mb-2">Họ và tên</label>
                     <input
                       type="text"
-                      value={isEditing ? editedProfile.name : profile.name}
+                      value={isEditing ? (editedProfile.name || "") : (profile.name || "")}
                       onChange={(e) => setEditedProfile({ ...editedProfile, name: e.target.value })}
                       disabled={!isEditing}
                       className="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-60 text-foreground"
@@ -1172,7 +1303,7 @@ function ProfilePageContent() {
                     <label className="block text-sm font-medium text-foreground mb-2">Số điện thoại</label>
                     <input
                       type="tel"
-                      value={isEditing ? editedProfile.phone : profile.phone}
+                      value={isEditing ? (editedProfile.phone || "") : (profile.phone || "")}
                       onChange={(e) => setEditedProfile({ ...editedProfile, phone: e.target.value })}
                       disabled={!isEditing}
                       className="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-60 text-foreground"
@@ -1265,6 +1396,11 @@ function ProfilePageContent() {
                           })() : undefined
                           const labelFromState = codeUpper && ghnStatuses[codeUpper] ? ghnStatuses[codeUpper] : undefined
                           const displayStatus = labelFromSnap || labelFromState || order.status
+                          const isDelivered = displayStatus === "Đã giao hàng" || order.status === "Đã giao"
+                          const reviewStatus = ordersReviewStatus[order.id]
+                          // Check if all products in order have been reviewed
+                          const allReviewed = reviewStatus?.products.every(p => p.hasReviewed) ?? false
+                          const canShowReviewButton = isDelivered && !allReviewed && order.orderItems && order.orderItems.length > 0
                           return (
                             <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(displayStatus)}`}>
                               {displayStatus}
@@ -1277,13 +1413,49 @@ function ProfilePageContent() {
                         <div className="text-sm text-muted-foreground">{order.items} sản phẩm</div>
                         <div className="text-right">
                           <p className="text-lg font-bold text-foreground">{order.total.toLocaleString("vi-VN")}₫</p>
-                          <div className="flex gap-2 mt-2">
+                          <div className="flex gap-2 mt-2 flex-wrap justify-end">
                             <button
                               onClick={() => handleViewOrderDetails(order.id)}
                               className="text-sm text-primary hover:underline"
                             >
                               Xem chi tiết
                             </button>
+                            {/* Nút Đánh giá - chỉ hiện khi đơn đã giao và chưa review hết */}
+                            {(() => {
+                              const codeUpper = (order.ghnOrderCode || "").trim().toUpperCase()
+                              const snap = ghnDebug[codeUpper]
+                              const labelFromSnap = snap?.currentStatus ? (() => {
+                                const map: Record<string, string> = {
+                                  delivered: "Đã giao hàng",
+                                }
+                                return map[snap.currentStatus as string]
+                              })() : undefined
+                              const labelFromState = codeUpper && ghnStatuses[codeUpper] ? ghnStatuses[codeUpper] : undefined
+                              const displayStatus = labelFromSnap || labelFromState || order.status
+                              const isDelivered = displayStatus === "Đã giao hàng" || order.status === "Đã giao"
+                              const reviewStatus = ordersReviewStatus[order.id]
+                              const allReviewed = reviewStatus?.products.every(p => p.hasReviewed) ?? false
+                              const canShowReviewButton = isDelivered && !allReviewed && order.orderItems && order.orderItems.length > 0
+                              
+                              return canShowReviewButton ? (
+                                <button
+                                  onClick={() => {
+                                    // Chuyển tới trang sản phẩm đầu tiên chưa review
+                                    const firstUnreviewed = order.orderItems?.find((item: any) => {
+                                      const productStatus = reviewStatus?.products.find(p => p.productId === item.product?.id)
+                                      return !productStatus?.hasReviewed
+                                    })
+                                    const productToReview = firstUnreviewed?.product || order.orderItems?.[0]?.product
+                                    if (productToReview) {
+                                      router.push(`/products/${productToReview.id}?orderId=${order.id}`)
+                                    }
+                                  }}
+                                  className="text-sm text-green-600 hover:underline font-medium"
+                                >
+                                  Đánh giá
+                                </button>
+                              ) : null
+                            })()}
                             {/* Removed manual GHN refresh button; statuses auto-sync from GHN */}
                             {(order.status === 'Đang xử lý') && (
                               <button
