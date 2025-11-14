@@ -45,7 +45,7 @@ export const addToCart = async (userId, { productId, quantity }) => {
 		const updated = await prisma.cartItem.update({ where: { id: existing.id }, data: { quantity: newQuantity } });
 		return { ok: true, itemId: updated.id };
 	}
-	const id = await generateId("CIT", "CartItem");
+	const id = await generateId("CRT", "CartItem");
 	const created = await prisma.cartItem.create({ data: { id, userId, productId, quantity: qty } });
 	return { ok: true, itemId: created.id };
 };

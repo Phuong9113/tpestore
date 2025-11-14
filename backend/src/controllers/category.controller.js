@@ -3,8 +3,10 @@ import { success } from "../utils/response.js";
 
 export const getCategories = async (req, res, next) => {
 	try {
-		success(res, await categoryService.list());
+		const categories = await categoryService.list();
+		success(res, categories);
 	} catch (err) {
+		console.error("Error in getCategories:", err);
 		next(err);
 	}
 };

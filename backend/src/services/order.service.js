@@ -1,6 +1,6 @@
 import prisma from "../utils/prisma.js";
 import { validateRequired } from "../utils/helpers.js";
-import { generateId } from "../utils/generateId.js";
+import { generateId, generateMultipleIds } from "../utils/generateId.js";
 
 export const listForUser = (userId) =>
 	prisma.order.findMany({
@@ -61,7 +61,7 @@ export const create = async (userId, body) => {
 	const shippingFee = shippingInfo?.shippingFee || 0;
 	const finalTotal = totalPrice + shippingFee;
 	const orderId = await generateId("ORD", "Order");
-	const orderItemIds = await Promise.all(items.map(() => generateId("OIT", "OrderItem")));
+	const orderItemIds = await generateMultipleIds("ORI", "OrderItem", items.length);
 	const order = await prisma.order.create({
 		data: {
 			id: orderId,

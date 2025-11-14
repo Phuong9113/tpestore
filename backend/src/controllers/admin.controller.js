@@ -1,7 +1,7 @@
 import prisma from "../utils/prisma.js";
 import xlsx from "xlsx";
 import ghnService from "../services/ghn.service.js";
-import { generateId } from "../utils/generateId.js";
+import { generateId, generateMultipleIds } from "../utils/generateId.js";
 
 // Users
 export const getAdminUsers = async (req, res, next) => {
@@ -170,7 +170,7 @@ export const createProduct = async (req, res, next) => {
 		if (!category) return res.status(400).json({ error: "Category not found" });
 		const resolvedStock = stock !== undefined && stock !== null && !Number.isNaN(Number(stock)) ? parseInt(stock) : inStock !== undefined ? (inStock ? 1 : 0) : 1;
 		const productId = await generateId("PRD", "Product");
-		const specValueIds = specs.length > 0 ? await Promise.all(specs.map(() => generateId("SPV", "SpecValue"))) : [];
+		const specValueIds = specs.length > 0 ? await generateMultipleIds("SPV", "SpecValue", specs.length) : [];
 		const product = await prisma.product.create({
 			data: {
 				id: productId,
@@ -215,7 +215,7 @@ export const updateProduct = async (req, res, next) => {
 			...((stock !== undefined && stock !== null && !Number.isNaN(Number(stock))) ? { stock: parseInt(stock) } : inStock !== undefined ? { stock: inStock ? 1 : 0 } : {}),
 		};
 		if (specs.length > 0) {
-			const specValueIds = await Promise.all(specs.map(() => generateId("SPV", "SpecValue")));
+			const specValueIds = await generateMultipleIds("SPV", "SpecValue", specs.length);
 			updateData.specs = {
 				deleteMany: {},
 				create: specs.map((spec, index) => ({ 
@@ -315,7 +315,7 @@ export const importProductsFromExcel = async (req, res, next) => {
 				continue;
 			}
 			const productId = await generateId("PRD", "Product");
-			const specValueIds = specValues.length > 0 ? await Promise.all(specValues.map(() => generateId("SPV", "SpecValue"))) : [];
+			const specValueIds = specValues.length > 0 ? await generateMultipleIds("SPV", "SpecValue", specValues.length) : [];
 			const created = await prisma.product.create({
 				data: {
 					id: productId,
@@ -377,7 +377,7 @@ export const createCategory = async (req, res, next) => {
 		const existing = await prisma.category.findFirst({ where: { name: { equals: name, mode: "insensitive" } } });
 		if (existing) return res.status(409).json({ error: "Category name already exists" });
 		const categoryId = await generateId("CAT", "Category");
-		const specFieldIds = await Promise.all(specFields.map(() => generateId("SPF", "SpecField")));
+		const specFieldIds = await generateMultipleIds("SPF", "SpecField", specFields.length);
 		const category = await prisma.category.create({
 			data: { 
 				id: categoryId,
@@ -414,7 +414,7 @@ export const updateCategory = async (req, res, next) => {
 		await prisma.category.update({ where: { id }, data: { ...(name && { name }), ...(description !== undefined && { description }), ...(image && { image }) } });
 		if (specFields.length > 0) {
 			await prisma.specField.deleteMany({ where: { categoryId: id } });
-			const specFieldIds = await Promise.all(specFields.map(() => generateId("SPF", "SpecField")));
+			const specFieldIds = await generateMultipleIds("SPF", "SpecField", specFields.length);
 			await prisma.specField.createMany({ 
 				data: specFields.map((f, index) => ({ 
 					id: specFieldIds[index],
