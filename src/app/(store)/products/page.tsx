@@ -1,12 +1,19 @@
 "use client"
 
-import { Suspense, useEffect, useState } from "react"
+import { Suspense, useEffect, useState, useRef } from "react"
+import { useSearchParams, useRouter } from "next/navigation"
 import ProductCard from "@/components/ProductCard"
 import { Button } from "@/components/ui/button"
 import { FunnelIcon } from "@heroicons/react/24/outline"
 import { fetchProducts, fetchCategories, type UiProduct, type ApiCategory } from "@/lib/api"
 
 function ProductsContent() {
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const categoryParam = searchParams.get("category")
+  const isSyncingFromUrl = useRef(false)
+  const isInitialMount = useRef(true)
+  
   const [selectedCategory, setSelectedCategory] = useState<string>("all")
   const [sortBy, setSortBy] = useState<string>("featured")
   const [products, setProducts] = useState<UiProduct[]>([])
@@ -14,6 +21,7 @@ function ProductsContent() {
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string>("")
 
+  // Load products and categories
   useEffect(() => {
     let mounted = true
     ;(async () => {
@@ -37,6 +45,51 @@ function ProductsContent() {
     }
   }, [])
 
+  // Sync selectedCategory from URL param (only when URL changes, not when selectedCategory changes)
+  useEffect(() => {
+    if (categories.length === 0) return
+    
+    if (categoryParam) {
+      const decodedParam = decodeURIComponent(categoryParam)
+      const category = categories.find(cat => cat.name === decodedParam)
+      const targetCategoryId = category ? category.id : decodedParam
+      
+      // Only update if different to avoid unnecessary updates
+      if (selectedCategory !== targetCategoryId) {
+        isSyncingFromUrl.current = true
+        setSelectedCategory(targetCategoryId)
+        // Reset flag after state update completes
+        setTimeout(() => {
+          isSyncingFromUrl.current = false
+        }, 0)
+      }
+    } else if (isInitialMount.current) {
+      // On initial mount without category param, set to "all"
+      if (selectedCategory !== "all") {
+        setSelectedCategory("all")
+      }
+      isInitialMount.current = false
+    }
+  }, [categoryParam, categories]) // Removed selectedCategory from deps to avoid loop
+
+  // Update URL when category changes (only when user clicks, not when syncing from URL)
+  useEffect(() => {
+    if (categories.length === 0 || isSyncingFromUrl.current || isInitialMount.current) {
+      return
+    }
+    
+    const category = categories.find(cat => cat.id === selectedCategory)
+    const currentCategoryParam = categoryParam ? decodeURIComponent(categoryParam) : null
+    
+    if (selectedCategory === "all") {
+      if (categoryParam) {
+        router.replace("/products", { scroll: false })
+      }
+    } else if (category && category.name !== currentCategoryParam) {
+      router.replace(`/products?category=${encodeURIComponent(category.name)}`, { scroll: false })
+    }
+  }, [selectedCategory, categories, router, categoryParam])
+
   const allCategories = [
     { id: "all", name: "Tất cả" },
     ...categories.map(cat => ({ id: cat.id, name: cat.name }))
@@ -46,9 +99,16 @@ function ProductsContent() {
   let filteredProducts = products
   if (selectedCategory !== "all") {
     const selectedCat = categories.find(cat => cat.id === selectedCategory)
-    filteredProducts = filteredProducts.filter(
-      (product) => product.category === selectedCat?.name
-    )
+    if (selectedCat) {
+      filteredProducts = filteredProducts.filter(
+        (product) => product.category === selectedCat.name
+      )
+    } else {
+      // Fallback: filter by category name directly if ID not found
+      filteredProducts = filteredProducts.filter(
+        (product) => product.category === selectedCategory
+      )
+    }
   }
 
   // Sort products

@@ -11,6 +11,8 @@ import ProductCard from "@/components/ProductCard";
 import AddToCartButton from "@/components/AddToCartButton";
 import ProductReviews from "@/components/ProductReviews";
 import ProductReviewForm from "@/components/ProductReviewForm";
+import ProductDescription from "@/components/ProductDescription";
+import ProductSpecs from "@/components/ProductSpecs";
 import { fetchProductById, fetchProducts, type UiProduct } from "@/lib/api";
 
 export async function generateStaticParams() {
@@ -73,8 +75,8 @@ export default async function ProductDetailPage({
       <div className="container mx-auto px-4 py-8">
         <div className="grid md:grid-cols-2 gap-8 lg:gap-12">
           {/* Product Images */}
-          <div className="space-y-4">
-            <div className="aspect-square bg-secondary/30 rounded-2xl overflow-hidden relative">
+          <div className="flex flex-col">
+            <div className="bg-secondary/30 rounded-2xl overflow-hidden relative aspect-square max-h-[600px]">
               <img
                 src={product.image || "/placeholder.svg"}
                 alt={product.name}
@@ -96,7 +98,7 @@ export default async function ProductDetailPage({
           </div>
 
           {/* Product Info */}
-          <div className="space-y-6">
+          <div className="space-y-6 flex flex-col">
             {/* Category */}
             <div className="inline-block">
               <span className="text-xs text-muted-foreground uppercase tracking-wide font-medium bg-secondary px-3 py-1.5 rounded-full">
@@ -215,61 +217,38 @@ export default async function ProductDetailPage({
           </div>
         </div>
 
-        {/* Specifications Table */}
-        {product.specs && product.specs.length > 0 && (
-          <div className="mt-16">
-            <h2 className="text-2xl font-bold text-foreground mb-6">Thông số kỹ thuật</h2>
-            <div className="bg-card border border-border rounded-xl overflow-hidden">
-              <table className="w-full">
-                <tbody>
-                  {product.specs.map((spec, index) => (
-                    <tr key={spec.id} className={index % 2 === 0 ? "bg-secondary/30" : "bg-card"}>
-                      <td className="px-6 py-4 font-semibold text-foreground w-1/3">{spec.specField.name}</td>
-                      <td className="px-6 py-4 text-muted-foreground">{spec.value}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {/* Detailed Description */}
-        {product.description && (
-          <div className="mt-16">
-            <h2 className="text-2xl font-bold text-foreground mb-6">Mô tả chi tiết</h2>
-            <div className="bg-card border border-border rounded-xl p-8 space-y-8">
-              <div className="prose prose-lg max-w-none">
-                <p className="text-muted-foreground leading-relaxed text-base">{product.description}</p>
+        {/* Description and Specifications Side by Side */}
+        <div className="mt-16">
+          <div className="grid md:grid-cols-3 gap-6">
+            {/* Detailed Description - Left Side (2 columns) */}
+            <div className="flex flex-col h-full md:col-span-2">
+              <h2 className="text-2xl font-bold text-foreground mb-6">Mô tả chi tiết</h2>
+              <div className="bg-card border border-border rounded-xl p-8 flex-1 flex flex-col min-h-[400px]">
+                {product.description ? (
+                  <ProductDescription description={product.description} maxHeight={400} />
+                ) : (
+                  <div className="flex-1 flex items-center justify-center">
+                    <p className="text-muted-foreground">Chưa có mô tả chi tiết</p>
+                  </div>
+                )}
               </div>
+            </div>
 
-              {/* Product Images Gallery */}
-              <div className="grid md:grid-cols-2 gap-6 mt-8">
-                <div className="aspect-video bg-secondary/30 rounded-lg overflow-hidden">
-                  <img
-                    src={`/.jpg?key=42ahl&height=400&width=600&query=${product.name} lifestyle`}
-                    alt={`${product.name} lifestyle 1`}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <div className="aspect-video bg-secondary/30 rounded-lg overflow-hidden">
-                  <img
-                    src={`/.jpg?key=lvaxl&height=400&width=600&query=${product.name} features`}
-                    alt={`${product.name} features`}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <div className="aspect-video bg-secondary/30 rounded-lg overflow-hidden md:col-span-2">
-                  <img
-                    src={`/.jpg?key=2o3nm&height=400&width=1200&query=${product.name} detail view`}
-                    alt={`${product.name} detail`}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
+            {/* Specifications Table - Right Side (1 column) */}
+            <div className="flex flex-col h-full">
+              <h2 className="text-2xl font-bold text-foreground mb-6">Thông số kỹ thuật</h2>
+              <div className="bg-card border border-border rounded-xl overflow-hidden flex-1 flex flex-col min-h-[400px]">
+                {product.specs && product.specs.length > 0 ? (
+                  <ProductSpecs specs={product.specs} />
+                ) : (
+                  <div className="flex-1 flex items-center justify-center">
+                    <p className="text-muted-foreground">Chưa có thông số kỹ thuật</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
-        )}
+        </div>
 
         {/* Product Review Form - Only show if user has purchased */}
         <ProductReviewForm productId={product.id} orderId={orderId} />

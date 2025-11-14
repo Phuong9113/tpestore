@@ -5,16 +5,14 @@ import { usePathname } from "next/navigation"
 import {
   DevicePhoneMobileIcon,
   ComputerDesktopIcon,
-  DeviceTabletIcon,
-  MegaphoneIcon,
 } from "@heroicons/react/24/outline"
-import { HeadphonesIcon } from "lucide-react"
+import { MonitorIcon, HeadphonesIcon } from "lucide-react"
 
 const categories = [
-  { name: "Điện thoại", href: "/products?category=phone", icon: DevicePhoneMobileIcon },
-  { name: "Laptop", href: "/products?category=laptop", icon: ComputerDesktopIcon },
-  { name: "Tablet", href: "/products?category=tablet", icon: DeviceTabletIcon },
-  { name: "Phụ kiện", href: "/products?category=accessories", icon: HeadphonesIcon },
+  { name: "Điện thoại", href: "/products?category=Điện thoại", icon: DevicePhoneMobileIcon },
+  { name: "Laptop", href: "/products?category=Laptop", icon: ComputerDesktopIcon },
+  { name: "Màn hình máy tính", href: "/products?category=Màn hình máy tính", icon: MonitorIcon },
+  { name: "Thiết bị âm thanh", href: "/products?category=Thiết bị âm thanh", icon: HeadphonesIcon },
 ]
 
 export default function Navbar() {

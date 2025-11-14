@@ -73,7 +73,7 @@ export default function Footer() {
             <ul className="space-y-2">
               <li>
                 <Link
-                  href="/products?category=phone"
+                  href="/products?category=Điện thoại"
                   className="text-sm text-muted-foreground hover:text-primary transition-colors"
                 >
                   Điện thoại
@@ -81,7 +81,7 @@ export default function Footer() {
               </li>
               <li>
                 <Link
-                  href="/products?category=laptop"
+                  href="/products?category=Laptop"
                   className="text-sm text-muted-foreground hover:text-primary transition-colors"
                 >
                   Laptop
@@ -89,18 +89,18 @@ export default function Footer() {
               </li>
               <li>
                 <Link
-                  href="/products?category=tablet"
+                  href="/products?category=Màn hình máy tính"
                   className="text-sm text-muted-foreground hover:text-primary transition-colors"
                 >
-                  Tablet
+                  Màn hình máy tính
                 </Link>
               </li>
               <li>
                 <Link
-                  href="/products?category=accessories"
+                  href="/products?category=Thiết bị âm thanh"
                   className="text-sm text-muted-foreground hover:text-primary transition-colors"
                 >
-                  Phụ kiện
+                  Thiết bị âm thanh
                 </Link>
               </li>
             </ul>
