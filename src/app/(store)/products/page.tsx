@@ -11,6 +11,7 @@ function ProductsContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const categoryParam = searchParams.get("category")
+  const searchParam = searchParams.get("search")
   const isSyncingFromUrl = useRef(false)
   const isInitialMount = useRef(true)
   
@@ -97,6 +98,19 @@ function ProductsContent() {
 
   // Filter products
   let filteredProducts = products
+  
+  // Apply search filter
+  if (searchParam && searchParam.trim()) {
+    const searchLower = searchParam.toLowerCase().trim()
+    filteredProducts = filteredProducts.filter((product) => {
+      const nameMatch = product.name.toLowerCase().includes(searchLower)
+      const descriptionMatch = product.description?.toLowerCase().includes(searchLower)
+      const categoryMatch = product.category.toLowerCase().includes(searchLower)
+      return nameMatch || descriptionMatch || categoryMatch
+    })
+  }
+  
+  // Apply category filter
   if (selectedCategory !== "all") {
     const selectedCat = categories.find(cat => cat.id === selectedCategory)
     if (selectedCat) {
@@ -125,8 +139,27 @@ function ProductsContent() {
     <div className="container mx-auto px-4 py-8">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-4xl font-bold text-foreground mb-2">Sản phẩm</h1>
-        <p className="text-muted-foreground">Tìm thấy {filteredProducts.length} sản phẩm</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-4xl font-bold text-foreground mb-2">
+              {searchParam ? `Kết quả tìm kiếm: "${searchParam}"` : "Sản phẩm"}
+            </h1>
+            <p className="text-muted-foreground">
+              {searchParam 
+                ? `Tìm thấy ${filteredProducts.length} sản phẩm cho "${searchParam}"`
+                : `Tìm thấy ${filteredProducts.length} sản phẩm`}
+            </p>
+          </div>
+          {searchParam && (
+            <Button
+              variant="outline"
+              onClick={() => router.push("/products")}
+              className="ml-4"
+            >
+              Xóa tìm kiếm
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="flex flex-col lg:flex-row gap-8">
@@ -193,14 +226,28 @@ function ProductsContent() {
                   image={product.image}
                   category={product.category}
                   rating={product.rating}
+                  reviewCount={product.reviewCount}
                   inStock={product.inStock}
                 />
               ))}
             </div>
           ) : (
             <div className="text-center py-16">
-              <p className="text-muted-foreground text-lg">Không tìm thấy sản phẩm nào</p>
-              <Button onClick={() => setSelectedCategory("all")} variant="outline" className="mt-4">
+              <p className="text-muted-foreground text-lg">
+                {searchParam 
+                  ? `Không tìm thấy sản phẩm nào cho "${searchParam}"`
+                  : "Không tìm thấy sản phẩm nào"}
+              </p>
+              <Button 
+                onClick={() => {
+                  setSelectedCategory("all")
+                  if (searchParam) {
+                    router.push("/products")
+                  }
+                }} 
+                variant="outline" 
+                className="mt-4"
+              >
                 Xem tất cả sản phẩm
               </Button>
             </div>

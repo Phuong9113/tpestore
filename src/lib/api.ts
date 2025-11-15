@@ -68,18 +68,21 @@ export interface UiProduct {
   image: string;
   category: string;
   rating: number;
+  reviewCount: number;
   inStock: boolean;
   description?: string;
   specs?: ApiSpec[];
 }
 
 function mapApiProductToUi(product: ApiProduct): UiProduct {
-  const ratings = (product.reviews || []).map((r) => r.rating);
-  const avgRating = ratings.length
+  const reviews = product.reviews || [];
+  const ratings = reviews.map((r) => r.rating);
+  const reviewCount = reviews.length;
+  const avgRating = reviewCount > 0
     ? Math.round(
-        ratings.reduce((sum, r) => sum + r, 0) / ratings.length
+        ratings.reduce((sum, r) => sum + r, 0) / reviewCount
       )
-    : 0;
+    : 5; // Mặc định 5 sao nếu chưa có đánh giá
 
   return {
     id: product.id,
@@ -89,6 +92,7 @@ function mapApiProductToUi(product: ApiProduct): UiProduct {
     image: normalizeImageUrl(product.image),
     category: product.category?.name || "Khác",
     rating: avgRating,
+    reviewCount: reviewCount,
     inStock: typeof product.stock === 'number' ? product.stock > 0 : !!product.inStock,
     description: product.description,
     specs: product.specs,

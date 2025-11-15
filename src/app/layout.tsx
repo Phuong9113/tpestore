@@ -5,6 +5,7 @@ import { GeistMono } from "geist/font/mono"
 import { Analytics } from "@vercel/analytics/next"
 import "./globals.css"
 import { CartProvider } from "@/contexts/CartContext"
+import { ComparisonProvider } from "@/contexts/ComparisonContext"
 import ConditionalLayout from "@/components/ConditionalLayout"
 
 export const metadata: Metadata = {
@@ -22,9 +23,11 @@ export default function RootLayout({
     <html lang="vi">
       <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable} antialiased`}>
         <CartProvider>
-          <Suspense fallback={null}>
-            <ConditionalLayout>{children}</ConditionalLayout>
-          </Suspense>
+          <ComparisonProvider>
+            <Suspense fallback={null}>
+              <ConditionalLayout>{children}</ConditionalLayout>
+            </Suspense>
+          </ComparisonProvider>
         </CartProvider>
         <Analytics />
       </body>

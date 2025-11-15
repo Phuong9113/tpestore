@@ -39,6 +39,7 @@ export default async function HomePage() {
               image={product.image}
               category={product.category}
               rating={product.rating}
+              reviewCount={product.reviewCount}
               inStock={product.inStock}
             />
           ))}

@@ -7,12 +7,12 @@ import {
   ArrowPathIcon,
 } from "@heroicons/react/24/outline";
 import { Button } from "@/components/ui/button";
-import ProductCard from "@/components/ProductCard";
 import AddToCartButton from "@/components/AddToCartButton";
 import ProductReviews from "@/components/ProductReviews";
 import ProductReviewForm from "@/components/ProductReviewForm";
 import ProductDescription from "@/components/ProductDescription";
 import ProductSpecs from "@/components/ProductSpecs";
+import RelatedProductsSection from "@/components/RelatedProductsSection";
 import { fetchProductById, fetchProducts, type UiProduct } from "@/lib/api";
 
 export async function generateStaticParams() {
@@ -118,16 +118,22 @@ export default async function ProductDetailPage({
                   <span
                     key={i}
                     className={`text-lg ${
-                      i < product.rating ? "text-accent" : "text-muted"
+                      i < product.rating ? "text-yellow-400" : "text-muted-foreground"
                     }`}
                   >
                     ★
                   </span>
                 ))}
               </div>
-              <span className="text-sm text-muted-foreground">
-                ({product.rating}.0 đánh giá)
-              </span>
+              {product.reviewCount > 0 ? (
+                <span className="text-sm text-muted-foreground">
+                  ({product.reviewCount} đánh giá)
+                </span>
+              ) : (
+                <span className="text-sm text-muted-foreground">
+                  (Chưa có đánh giá)
+                </span>
+              )}
             </div>
 
             {/* Price */}
@@ -257,22 +263,10 @@ export default async function ProductDetailPage({
         <ProductReviews productId={product.id} />
 
         {/* Related Products */}
-        {relatedProducts.length > 0 && (
-          <div className="mt-16">
-            <h2 className="text-2xl font-bold text-foreground mb-6">
-              Sản phẩm liên quan
-            </h2>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 lg:gap-6">
-              {relatedProducts.map((relatedProduct) => (
-                <ProductCard
-                  key={relatedProduct.id}
-                  {...relatedProduct}
-                  originalPrice={relatedProduct.originalPrice ?? undefined}
-                />
-              ))}
-            </div>
-          </div>
-        )}
+        <RelatedProductsSection
+          currentProduct={product}
+          relatedProducts={relatedProducts}
+        />
       </div>
     </div>
   );

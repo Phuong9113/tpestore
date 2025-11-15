@@ -4,6 +4,8 @@ import Link from "next/link"
 import { ShoppingCartIcon, HeartIcon } from "@heroicons/react/24/outline"
 import { Button } from "@/components/ui/button"
 import { useCart } from "@/contexts/CartContext"
+import CompareButton from "./CompareButton"
+import type { UiProduct } from "@/lib/api"
 
 interface ProductCardProps {
   id: string
@@ -13,7 +15,10 @@ interface ProductCardProps {
   image: string
   category: string
   rating: number
+  reviewCount?: number
   inStock: boolean
+  specs?: UiProduct["specs"]
+  showCompareButton?: boolean
 }
 
 export default function ProductCard({
@@ -24,7 +29,10 @@ export default function ProductCard({
   image,
   category,
   rating,
+  reviewCount = 0,
   inStock,
+  specs,
+  showCompareButton = false,
 }: ProductCardProps) {
   const discount = originalPrice ? Math.round(((originalPrice - price) / originalPrice) * 100) : 0
   const { addItem } = useCart()
@@ -74,13 +82,15 @@ export default function ProductCard({
         </Link>
 
         {/* Rating */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 -mt-3">
           {[...Array(5)].map((_, i) => (
-            <span key={i} className={i < rating ? "text-accent" : "text-muted"}>
+            <span key={i} className={i < rating ? "text-yellow-400" : "text-muted-foreground"}>
               ★
             </span>
           ))}
-          <span className="text-xs text-muted-foreground ml-1">({rating}.0)</span>
+          {reviewCount > 0 && (
+            <span className="text-xs text-muted-foreground ml-1">({reviewCount})</span>
+          )}
         </div>
 
         {/* Price */}
@@ -101,6 +111,26 @@ export default function ProductCard({
           <ShoppingCartIcon className="w-4 h-4 mr-2" />
           {inStock ? "Thêm vào giỏ" : "Hết hàng"}
         </Button>
+
+        {/* Compare button - only show when showCompareButton is true */}
+        {showCompareButton && (
+          <div className="mt-2">
+            <CompareButton
+              product={{
+                id,
+                name,
+                price,
+                originalPrice,
+                image,
+                category,
+                rating,
+                inStock,
+                specs,
+              }}
+              className="w-full"
+            />
+          </div>
+        )}
       </div>
     </div>
   )

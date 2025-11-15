@@ -55,6 +55,36 @@ export const getServices = async (req, res, next) => {
 export const createShippingOrder = async (req, res, next) => {
 	try {
         let payload = { ...req.body };
+		
+		// Log địa chỉ người nhận trước khi xử lý
+		// eslint-disable-next-line no-console
+		console.log("[GHN][CreateOrder][Input] Received payload:", {
+			toWardCode: payload.toWardCode,
+			toDistrictId: payload.toDistrictId,
+			toProvinceId: payload.toProvinceId,
+			toAddress: payload.toAddress,
+			toName: payload.toName,
+			toPhone: payload.toPhone,
+			orderId: payload.orderId,
+		});
+
+		// Validate địa chỉ người nhận
+		if (!payload.toWardCode || !payload.toDistrictId) {
+			// eslint-disable-next-line no-console
+			console.error("[GHN][CreateOrder][Validation] Missing required fields:", {
+				toWardCode: payload.toWardCode || "MISSING",
+				toDistrictId: payload.toDistrictId || "MISSING",
+			});
+		} else {
+			// eslint-disable-next-line no-console
+			console.log("[GHN][CreateOrder][Validation] Address fields present:", {
+				toWardCode: payload.toWardCode,
+				toDistrictId: payload.toDistrictId,
+				toWardCodeType: typeof payload.toWardCode,
+				toDistrictIdType: typeof payload.toDistrictId,
+			});
+		}
+
 		try {
 			if (req.body?.orderId) {
 				const order = await prisma.order.findUnique({ where: { id: req.body.orderId } });
@@ -63,6 +93,17 @@ export const createShippingOrder = async (req, res, next) => {
 					payload.paymentTypeId = order.paymentMethod === "COD" ? 2 : 1;
 					// eslint-disable-next-line no-console
 					console.log("[GHN][CreateOrder] orderId=", order.id, "paymentMethod=", order.paymentMethod, "=> paymentTypeId=", payload.paymentTypeId);
+					
+					// Log địa chỉ từ order nếu có
+					if (order.shippingWard || order.shippingDistrict || order.shippingProvince) {
+						// eslint-disable-next-line no-console
+						console.log("[GHN][CreateOrder][OrderAddress] Order shipping address:", {
+							shippingWard: order.shippingWard,
+							shippingDistrict: order.shippingDistrict,
+							shippingProvince: order.shippingProvince,
+							shippingAddress: order.shippingAddress,
+						});
+					}
 				}
 			}
 		} catch {}

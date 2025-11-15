@@ -24,19 +24,18 @@ class GHNService {
 	constructor() {
 		this.baseURL = process.env.GHN_BASE_URL || "https://dev-online-gateway.ghn.vn";
 		this.token = process.env.GHN_TOKEN || "637170d5-942b-11ea-9821-0281a26fb5d4";
-		this.shopId = process.env.GHN_SHOP_ID || "885";
+		this.shopId = process.env.GHN_SHOP_ID || "197687";
 		this.timeout = 10000;
 		this.fallbackFee = 50000;
-		// Địa chỉ shop (nơi gửi hàng) - chỉ lấy từ .env
-		this.shopWardCode = process.env.GHN_SHOP_WARD_CODE;
-		this.shopDistrictId = process.env.GHN_SHOP_DISTRICT_ID ? parseInt(process.env.GHN_SHOP_DISTRICT_ID) : null;
-		this.shopProvinceId = process.env.GHN_SHOP_PROVINCE_ID ? parseInt(process.env.GHN_SHOP_PROVINCE_ID) : null;
-		
-		// Validate địa chỉ shop bắt buộc
-		if (!this.shopWardCode || !this.shopDistrictId) {
-			// eslint-disable-next-line no-console
-			console.warn("[GHN] Warning: Shop address not configured. Please set GHN_SHOP_WARD_CODE and GHN_SHOP_DISTRICT_ID in .env");
-		}
+		// Địa chỉ shop (nơi gửi hàng) - sẽ lấy từ API
+		this.shopWardCode = null;
+		this.shopDistrictId = null;
+		this.shopProvinceId = null;
+		this.shopAddress = null; // Địa chỉ đầy đủ từ API (không dùng trong payload)
+		this.shopName = null; // Tên shop từ API
+		this.shopPhone = null; // Số điện thoại shop từ API
+		this.shopAddressInitialized = false;
+		this.shopAddressInitializing = null; // Promise để tránh gọi API nhiều lần đồng thời
 	}
 
 	getHeaders() {
@@ -45,6 +44,76 @@ class GHNService {
 			Token: this.token,
 			ShopId: this.shopId,
 		};
+	}
+
+	async getShops(offset = 0, limit = 50, clientPhone = "") {
+		try {
+			const payload = {
+				offset: offset,
+				limit: limit,
+				client_phone: clientPhone,
+			};
+			return await httpRequest(
+				`${this.baseURL}/shiip/public-api/v2/shop/all`,
+				{ method: "POST", headers: this.getHeaders(), body: JSON.stringify(payload) },
+				this.timeout
+			);
+		} catch (error) {
+			// eslint-disable-next-line no-console
+			console.error("Error fetching shops:", error.message);
+			throw new Error("Không thể lấy danh sách cửa hàng");
+		}
+	}
+
+	async initializeShopAddress() {
+		// Nếu đã khởi tạo, không cần gọi lại
+		if (this.shopAddressInitialized) {
+			return;
+		}
+
+		// Nếu đang khởi tạo, đợi promise hiện tại
+		if (this.shopAddressInitializing) {
+			await this.shopAddressInitializing;
+			return;
+		}
+
+		// Bắt đầu khởi tạo
+		this.shopAddressInitializing = (async () => {
+			try {
+				const result = await this.getShops(0, 50, "");
+				if (result && result.code === 200 && result.data && result.data.shops && result.data.shops.length > 0) {
+					// Lấy shop đầu tiên (hoặc có thể filter theo shopId nếu cần)
+					const shop = result.data.shops.find((s) => String(s._id) === String(this.shopId)) || result.data.shops[0];
+					
+					if (shop && shop.ward_code && shop.district_id) {
+						this.shopWardCode = shop.ward_code;
+						this.shopDistrictId = parseInt(shop.district_id);
+						// province_id có thể không có trong response
+						this.shopProvinceId = shop.province_id ? parseInt(shop.province_id) : null;
+						// Lưu địa chỉ đầy đủ nếu có (không dùng trong payload)
+						this.shopAddress = shop.address || null;
+						// Lưu tên và số điện thoại shop để truyền vào payload
+						this.shopName = shop.name || null;
+						this.shopPhone = shop.phone || null;
+						this.shopAddressInitialized = true;
+						// eslint-disable-next-line no-console
+						console.log("[GHN] Shop address initialized from API - District:", this.shopDistrictId, "Ward:", this.shopWardCode, "Province:", this.shopProvinceId, "Name:", this.shopName, "Phone:", this.shopPhone);
+					} else {
+						throw new Error("Shop address không hợp lệ từ API response");
+					}
+				} else {
+					throw new Error("Không tìm thấy cửa hàng trong response");
+				}
+			} catch (error) {
+				// eslint-disable-next-line no-console
+				console.error("[GHN] Error initializing shop address from API:", error.message);
+				throw new Error("Không thể lấy địa chỉ cửa hàng từ API: " + error.message);
+			} finally {
+				this.shopAddressInitializing = null;
+			}
+		})();
+
+		await this.shopAddressInitializing;
 	}
 
 	async getProvinces() {
@@ -95,16 +164,24 @@ class GHNService {
 
 	async calculateShippingFee(data) {
 		try {
+			// Khởi tạo shop address nếu chưa có
+			if (!data.fromDistrictId) {
+				await this.initializeShopAddress();
+			}
+			
 			// Sử dụng fromDistrictId từ data nếu có, nếu không thì dùng shop address
 			const fromDistrictId = data.fromDistrictId ? parseInt(data.fromDistrictId) : this.shopDistrictId;
+			const fromWardCode = data.fromWardCode || this.shopWardCode;
 			
 			// Validate shop address nếu dùng
 			if (!fromDistrictId && !this.shopDistrictId) {
-				throw new Error("Shop address chưa được cấu hình. Vui lòng set GHN_SHOP_DISTRICT_ID trong file .env");
+				throw new Error("Không thể lấy địa chỉ cửa hàng từ API");
 			}
 			
 			const payload = {
-				from_district_id: fromDistrictId || this.shopDistrictId,
+				// Chỉ truyền from_district_id và from_ward_code, không truyền from_address để tránh GHN gọi Google API
+				...(fromDistrictId || this.shopDistrictId ? { from_district_id: fromDistrictId || this.shopDistrictId } : {}),
+				...(fromWardCode ? { from_ward_code: fromWardCode } : {}),
 				to_district_id: parseInt(data.toDistrictId),
 				to_ward_code: data.toWardCode,
 				service_type_id: parseInt(data.serviceTypeId) || 2,
@@ -144,79 +221,118 @@ class GHNService {
 	}
 
 	async createShippingOrder(data) {
+		// Khởi tạo shop address từ API nếu chưa có
+		await this.initializeShopAddress();
+		
 		// Validate shop address đã được config
 		if (!this.shopWardCode || !this.shopDistrictId) {
-			throw new Error("Shop address chưa được cấu hình. Vui lòng set GHN_SHOP_WARD_CODE và GHN_SHOP_DISTRICT_ID trong file .env");
+			throw new Error("Không thể lấy địa chỉ cửa hàng từ API. Vui lòng kiểm tra token và shop ID");
 		}
 		
-		let serviceId = parseInt(data.serviceId) || 53320;
+		// Loại bỏ các trường địa chỉ dạng text để tránh GHN gọi Google API
+		// Chỉ giữ lại ID (district_id, ward_code, province_id) và các trường khác
+		const {
+			fromAddress,
+			from_address,
+			fromName,
+			from_name,
+			fromPhone,
+			from_phone,
+			fromWardName,
+			from_ward_name,
+			fromDistrictName,
+			from_district_name,
+			fromProvinceName,
+			from_province_name,
+			toAddress,
+			to_address, // Loại bỏ địa chỉ dạng text "Vietnam, Phường..., Quận..., Tỉnh..."
+			returnAddress,
+			return_address, // Loại bỏ địa chỉ trả hàng dạng text
+			...cleanData
+		} = data;
+		
+		let serviceId = parseInt(cleanData.serviceId) || 53320;
 		try {
-			const services = await this.getServices(this.shopDistrictId, parseInt(data.toDistrictId));
+			const services = await this.getServices(this.shopDistrictId, parseInt(cleanData.toDistrictId));
 			if (services && services.data && services.data.length > 0) {
 				serviceId = services.data[0].service_id;
 			}
 		} catch {}
 		try {
 			const payload = {
+				// CHỈ TRUYỀN ID - KHÔNG TRUYỀN ĐỊA CHỈ DẠNG TEXT
+				// Để tránh GHN API gọi Google Geocoding API gây lỗi
+				// Chỉ dùng: district_id, ward_code, province_id (ID số)
+				// KHÔNG dùng: address (text như "Vietnam, Phường..., Quận..., Tỉnh...")
+				
+				// Địa chỉ người gửi: chỉ dùng ID, không dùng text
 				from_district_id: this.shopDistrictId,
 				from_ward_code: this.shopWardCode,
-				to_ward_code: data.toWardCode,
-				to_district_id: parseInt(data.toDistrictId),
-				weight: parseInt(data.weight) || 200,
-				service_type_id: parseInt(data.serviceTypeId) || 2,
+				...(this.shopProvinceId && { from_province_id: this.shopProvinceId }),
+				// Truyền from_name và from_phone để GHN không cố lấy từ shop và gọi Google API
+				...(this.shopName && { from_name: this.shopName }),
+				...(this.shopPhone && { from_phone: this.shopPhone }),
+				
+				// Địa chỉ người nhận: chỉ dùng ID, không dùng to_address (text)
+				to_ward_code: cleanData.toWardCode,
+				to_district_id: parseInt(cleanData.toDistrictId),
+				weight: parseInt(cleanData.weight) || 200,
+				service_type_id: parseInt(cleanData.serviceTypeId) || 2,
 				service_id: serviceId,
-				items: (data.items || []).map((it) => {
+				items: (cleanData.items || []).map((it) => {
 					const item = {
 						name: it.name,
 						quantity: parseInt(it.quantity) || 1,
 						weight: parseInt(it.weight) || 30,
 						code: it.code || it.name || "PRODUCT",
 					};
-					if (parseInt(data.serviceTypeId) === 5) {
+					if (parseInt(cleanData.serviceTypeId) === 5) {
 						item.length = parseInt(it.length) || 5;
 						item.width = parseInt(it.width) || 5;
 						item.height = parseInt(it.height) || 3;
 					}
 					return item;
 				}),
-				...(data.clientOrderCode && { client_order_code: data.clientOrderCode }),
-				...(data.toName && { to_name: data.toName }),
-				...(data.toPhone && { to_phone: data.toPhone }),
-				...(data.toAddress && { to_address: data.toAddress }),
-				...(data.toProvinceId && { to_province_id: parseInt(data.toProvinceId) }),
-				...(data.hamlet && { hamlet: data.hamlet }),
-				...(data.returnName && { return_name: data.returnName }),
-				...(data.returnPhone && { return_phone: data.returnPhone }),
-				...(data.returnAddress && { return_address: data.returnAddress }),
-				...(data.returnWardCode && { return_ward_code: data.returnWardCode }),
-				...(data.returnDistrictId && { return_district_id: parseInt(data.returnDistrictId) }),
-				...(data.returnProvinceId && { return_province_id: parseInt(data.returnProvinceId) }),
-				...(data.codAmount && { cod_amount: parseInt(data.codAmount) }),
-				...(data.length && { length: parseInt(data.length) }),
-				...(data.width && { width: parseInt(data.width) }),
-				...(data.height && { height: parseInt(data.height) }),
-				...(data.insuranceValue && { insurance_value: parseInt(data.insuranceValue) }),
-				required_note: data.requiredNote || "CHOTHUHANG",
-				payment_type_id: data.paymentTypeId || 1,
+				...(cleanData.clientOrderCode && { client_order_code: cleanData.clientOrderCode }),
+				...(cleanData.toName && { to_name: cleanData.toName }),
+				...(cleanData.toPhone && { to_phone: cleanData.toPhone }),
+				// KHÔNG truyền to_address để tránh GHN gọi Google API (chỉ dùng ID: to_ward_code, to_district_id, to_province_id)
+				...(cleanData.toProvinceId && { to_province_id: parseInt(cleanData.toProvinceId) }),
+				...(cleanData.hamlet && { hamlet: cleanData.hamlet }),
+				...(cleanData.returnName && { return_name: cleanData.returnName }),
+				...(cleanData.returnPhone && { return_phone: cleanData.returnPhone }),
+				// KHÔNG truyền return_address để tránh GHN gọi Google API (chỉ dùng ID: return_ward_code, return_district_id, return_province_id)
+				...(cleanData.returnWardCode && { return_ward_code: cleanData.returnWardCode }),
+				...(cleanData.returnDistrictId && { return_district_id: parseInt(cleanData.returnDistrictId) }),
+				...(cleanData.returnProvinceId && { return_province_id: parseInt(cleanData.returnProvinceId) }),
+				...(cleanData.codAmount && { cod_amount: parseInt(cleanData.codAmount) }),
+				...(cleanData.length && { length: parseInt(cleanData.length) }),
+				...(cleanData.width && { width: parseInt(cleanData.width) }),
+				...(cleanData.height && { height: parseInt(cleanData.height) }),
+				...(cleanData.insuranceValue && { insurance_value: parseInt(cleanData.insuranceValue) }),
+				required_note: cleanData.requiredNote || "CHOTHUHANG",
+				payment_type_id: cleanData.paymentTypeId || 1,
 			};
 			try {
-				const sample = {
-					from_district_id: payload.from_district_id,
-					from_ward_code: payload.from_ward_code,
-					to_ward_code: payload.to_ward_code,
-					to_district_id: payload.to_district_id,
-					service_type_id: payload.service_type_id,
-					service_id: payload.service_id,
-					payment_type_id: payload.payment_type_id,
-					cod_amount: data.codAmount ? parseInt(data.codAmount) : 0,
-					insurance_value: payload.insurance_value || 0,
-					items_count: Array.isArray(payload.items) ? payload.items.length : 0,
-					weight: payload.weight,
-				};
+				// Log toàn bộ payload để debug - kiểm tra xem có trường địa chỉ text nào không
+				const payloadKeys = Object.keys(payload);
+				const addressFields = payloadKeys.filter(key => 
+					key.includes('address') || 
+					key.includes('Address') ||
+					key.includes('ward_name') ||
+					key.includes('district_name') ||
+					key.includes('province_name')
+				);
+				if (addressFields.length > 0) {
+					// eslint-disable-next-line no-console
+					console.warn("[GHN][CreateOrder] WARNING: Found address text fields in payload:", addressFields);
+				}
 				// eslint-disable-next-line no-console
-				console.log("[GHN][CreateOrder] Payload summary:", sample);
+				console.log("[GHN][CreateOrder] Full payload keys:", payloadKeys);
 				// eslint-disable-next-line no-console
-				console.log("[GHN][CreateOrder] Shop address - District:", this.shopDistrictId, "Ward:", this.shopWardCode);
+				console.log("[GHN][CreateOrder] Payload (no address text):", JSON.stringify(payload, null, 2));
+				// eslint-disable-next-line no-console
+				console.log("[GHN][CreateOrder] Shop address - District:", this.shopDistrictId, "Ward:", this.shopWardCode, "Province:", this.shopProvinceId);
 			} catch {}
 			const result = await httpRequest(
 				`${this.baseURL}/shiip/public-api/v2/shipping-order/create`,

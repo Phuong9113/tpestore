@@ -526,7 +526,7 @@ export default function CheckoutPage() {
             orderId: orderId, // Link shipping order to database order
             toName: shippingInfo.name,
             toPhone: shippingInfo.phone,
-            toAddress: shippingInfo.address,
+            // KHÔNG truyền toAddress để tránh GHN gọi Google API (chỉ dùng ID: toWardCode, toDistrictId, toProvinceId)
             toWardCode: shippingInfo.ward,
             toDistrictId: shippingInfo.district,
             toProvinceId: shippingInfo.province,

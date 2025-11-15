@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { ShoppingCartIcon, UserIcon, MagnifyingGlassIcon, ChevronDownIcon, CogIcon } from "@heroicons/react/24/outline"
 import Navbar from "./Navbar"
 import { useCart } from "@/contexts/CartContext"
@@ -8,11 +9,13 @@ import { useEffect, useState } from "react"
 import { me, clearToken, type AuthUser } from "@/lib/auth"
 
 export default function Header() {
+  const router = useRouter()
   const { totalItems } = useCart()
   const [animate, setAnimate] = useState(false)
   const [showAccountMenu, setShowAccountMenu] = useState(false)
   const [user, setUser] = useState<AuthUser | null>(null)
   const [isClient, setIsClient] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("")
 
   useEffect(() => {
     setIsClient(true)
@@ -50,14 +53,24 @@ export default function Header() {
 
           {/* Search bar */}
           <div className="hidden md:flex flex-1 max-w-xl mx-8">
-            <div className="relative w-full">
+            <form
+              className="relative w-full"
+              onSubmit={(e) => {
+                e.preventDefault()
+                if (searchQuery.trim()) {
+                  router.push(`/products?search=${encodeURIComponent(searchQuery.trim())}`)
+                }
+              }}
+            >
               <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <input
                 type="search"
                 placeholder="Tìm kiếm sản phẩm..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 bg-secondary border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring text-foreground placeholder:text-muted-foreground"
               />
-            </div>
+            </form>
           </div>
 
           <div className="flex items-center gap-3">
