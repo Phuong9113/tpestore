@@ -1,10 +1,7 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import dotenv from "dotenv";
+import { getGenerativeModel } from "../utils/gemini.js";
 
 dotenv.config();
-
-// 🔑 Khởi tạo API Gemini
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 // Danh sách model khả dụng (có thể thay đổi tùy key bạn được cấp)
 const MODEL_CANDIDATES = [
@@ -38,7 +35,7 @@ export async function chat(req, res) {
 
     for (const modelId of MODEL_CANDIDATES) {
       try {
-        const model = genAI.getGenerativeModel({ model: modelId });
+        const model = getGenerativeModel(modelId);
 
         const result = await model.generateContent({
           contents,
@@ -84,7 +81,7 @@ export async function chatStream(req, res) {
     ];
 
     const modelId = "gemini-1.5-flash";
-    const model = genAI.getGenerativeModel({ model: modelId });
+    const model = getGenerativeModel(modelId);
 
     const streamingResult = await model.generateContentStream({
       contents,

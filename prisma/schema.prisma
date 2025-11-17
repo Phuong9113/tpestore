@@ -1,5 +1,6 @@
 generator client {
   provider = "prisma-client-js"
+  previewFeatures = ["pgVector"]
 }
 
 datasource db {
@@ -84,6 +85,7 @@ model Product {
   interactions ProductInteraction[]
   reviews      Review[]             @relation("ProductReviews")
   specs        SpecValue[]          @relation("ProductSpecValues")
+  embedding    ProductEmbedding?
 }
 
 model SpecValue {
@@ -200,4 +202,15 @@ model OrderStatusNotification {
   order       Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   @@unique([orderId, status])
+}
+
+model ProductEmbedding {
+  id        String   @id @default(cuid())
+  productId String   @unique
+  embedding Vector   @db.Vector(768)
+  rawText   String
+  jsonData  Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
