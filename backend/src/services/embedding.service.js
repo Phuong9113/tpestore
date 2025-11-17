@@ -1,5 +1,5 @@
 import { env } from "../config/env.js";
-import { getGenerativeModel } from "../utils/gemini.js";
+import { getGenerativeModel, withGeminiRetry } from "../utils/gemini.js";
 
 let embeddingModel;
 
@@ -16,11 +16,13 @@ export async function generateEmbeddingVector(text) {
 	}
 
 	const model = getEmbeddingModel();
-	const result = await model.embedContent({
-		content: {
-			parts: [{ text }],
-		},
-	});
+	const result = await withGeminiRetry(() =>
+		model.embedContent({
+			content: {
+				parts: [{ text }],
+			},
+		}),
+	);
 
 	const values = result?.embedding?.values;
 	if (!Array.isArray(values)) {

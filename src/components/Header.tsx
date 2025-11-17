@@ -2,7 +2,12 @@
 
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ShoppingCartIcon, UserIcon, MagnifyingGlassIcon, ChevronDownIcon, CogIcon } from "@heroicons/react/24/outline"
+import {
+  ShoppingCartIcon,
+  UserIcon,
+  MagnifyingGlassIcon,
+  ChevronDownIcon,
+} from "@heroicons/react/24/outline"
 import Navbar from "./Navbar"
 import { useCart } from "@/contexts/CartContext"
 import { useEffect, useState } from "react"

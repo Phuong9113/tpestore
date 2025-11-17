@@ -26,7 +26,7 @@ export default function ChatBox({ onClose }: ChatBoxProps): JSX.Element {
   const GREETING: ChatMessage = {
     role: "model",
     content:
-      "Xin chào! Tôi là trợ lý AI của TPE Store. Hãy cho tôi biết bạn cần hỗ trợ gì về sản phẩm hoặc đơn hàng.",
+      "Xin chào! Tôi là trợ lý tìm kiếm sản phẩm của TPE Store. Hãy mô tả nhu cầu để tôi gợi ý sản phẩm phù hợp nhé.",
   };
   const [messages, setMessages] = useState<ChatMessage[]>([GREETING]);
   const [input, setInput] = useState<string>("");
@@ -57,35 +57,48 @@ export default function ChatBox({ onClose }: ChatBoxProps): JSX.Element {
     setLoading(true);
 
     try {
-      // POST to Express backend
-      const res = await fetch(`${DEFAULT_ENDPOINT}/api/chat`, {
+      // Convert messages to history format for product assistant API
+      // Skip the greeting message and only include recent conversation
+      const historyMessages = messages
+        .slice(1) // Skip greeting
+        .map((msg) => ({
+          role: msg.role === "user" ? "user" : "model",
+          content: msg.content,
+        }));
+
+      // POST to Product Assistant API (with function calling support)
+      const res = await fetch(`${DEFAULT_ENDPOINT}/api/ai/products/assistant`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        // Không giữ lịch sử: luôn gửi yêu cầu mới không có history
-        body: JSON.stringify({ message: userText, history: [] }),
+        body: JSON.stringify({ 
+          message: userText, 
+          history: historyMessages 
+        }),
       });
 
       if (!res.ok) {
-        throw new Error(`Server error ${res.status}`);
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData?.error || `Server error ${res.status}`);
       }
 
-      const data: { reply?: string } = await res.json();
-      const aiText = data?.reply || "Xin lỗi, tôi không thể trả lời ngay lúc này.";
+      const data: { answer?: string } = await res.json();
+      const aiText = data?.answer || "Xin lỗi, tôi không thể trả lời ngay lúc này.";
       // Thêm câu trả lời AI vào lịch sử (giữ lại tất cả messages cũ)
       setMessages((prev) => [...prev, { role: "model", content: aiText }]);
-    } catch (_e) {
+    } catch (error) {
       // Thêm thông báo lỗi vào lịch sử
+      const errorMessage = error instanceof Error ? error.message : "Đã xảy ra lỗi kết nối đến máy chủ AI. Vui lòng thử lại sau.";
       setMessages((prev) => [
         ...prev,
         {
           role: "model",
-          content: "Đã xảy ra lỗi kết nối đến máy chủ AI. Vui lòng thử lại sau.",
+          content: errorMessage,
         },
       ]);
     } finally {
       setLoading(false);
     }
-  }, [canSend, input]);
+  }, [canSend, input, messages]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -149,7 +162,7 @@ export default function ChatBox({ onClose }: ChatBoxProps): JSX.Element {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             rows={1}
-            placeholder="Nhập câu hỏi của bạn..."
+            placeholder="Ví dụ: Tôi cần laptop mỏng nhẹ dưới 25 triệu..."
             className="flex-1 resize-none rounded-xl border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-neutral-900 dark:border-neutral-800"
           />
           <button

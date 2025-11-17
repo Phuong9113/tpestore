@@ -9,6 +9,7 @@ import {
   UsersIcon,
   ChartBarIcon,
   ClipboardDocumentListIcon,
+  SparklesIcon,
 } from "@heroicons/react/24/outline"
 
 const navigation = [
@@ -18,6 +19,7 @@ const navigation = [
   { name: "Người dùng", href: "/dashboard/admin/users", icon: UsersIcon },
   { name: "Đơn hàng", href: "/dashboard/admin/orders", icon: ClipboardDocumentListIcon },
   { name: "Thống kê", href: "/dashboard/admin/analytics", icon: ChartBarIcon },
+  { name: "AI Labs", href: "/dashboard/admin/ai-labs", icon: SparklesIcon },
 ]
 
 export default function AdminSidebar() {

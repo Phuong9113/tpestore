@@ -1,6 +1,5 @@
 generator client {
   provider = "prisma-client-js"
-  previewFeatures = ["pgVector"]
 }
 
 datasource db {
@@ -207,7 +206,7 @@ model OrderStatusNotification {
 model ProductEmbedding {
   id        String   @id @default(cuid())
   productId String   @unique
-  embedding Vector   @db.Vector(768)
+  embedding Unsupported("vector")
   rawText   String
   jsonData  Json
   createdAt DateTime @default(now())

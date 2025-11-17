@@ -18,7 +18,7 @@ export const env = {
 	GEMINI_RAG_MODEL: process.env.GEMINI_RAG_MODEL || "gemini-1.5-flash",
 	GEMINI_ASSIST_MODEL: process.env.GEMINI_ASSIST_MODEL || "gemini-1.5-pro",
 	EMBEDDING_DIMENSION: process.env.EMBEDDING_DIMENSION ? Number(process.env.EMBEDDING_DIMENSION) : 768,
-	VECTOR_TOP_K: process.env.VECTOR_TOP_K ? Number(process.env.VECTOR_TOP_K) : 5,
+	VECTOR_TOP_K: process.env.VECTOR_TOP_K ? Number(process.env.VECTOR_TOP_K) : 3,
 	VECTOR_STORE_PROVIDER: (process.env.VECTOR_STORE_PROVIDER || "pgvector").toLowerCase(),
 	PINECONE_API_KEY: process.env.PINECONE_API_KEY || "",
 	PINECONE_INDEX_NAME: process.env.PINECONE_INDEX_NAME || "",

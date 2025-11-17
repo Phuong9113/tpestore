@@ -31,8 +31,11 @@ export default async function ProductDetailPage({
   params: { id: string };
   searchParams: { orderId?: string };
 }) {
-  const product = await fetchProductById(params.id);
-  const orderId = searchParams?.orderId;
+  const resolvedParams = await params;
+  const resolvedSearchParams = await searchParams;
+
+  const product = await fetchProductById(resolvedParams.id);
+  const orderId = resolvedSearchParams?.orderId;
 
   if (!product) {
     notFound();
