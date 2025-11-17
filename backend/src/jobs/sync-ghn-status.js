@@ -1,6 +1,7 @@
 import cron from "node-cron";
 import prisma from "../utils/prisma.js";
 import ghnService from "../services/ghn.service.js";
+import { notifyOrderStatusChange } from "../services/order-status-notification.service.js";
 
 function mapGhnToOrderStatus(currentStatus) {
   const s = (currentStatus || "").toString().toLowerCase();
@@ -39,7 +40,15 @@ async function syncOneOrder(order) {
     }
 
     if (order.status !== mapped) {
-      await prisma.order.update({ where: { id: order.id }, data: { status: mapped } });
+      const updatedOrder = await prisma.order.update({
+        where: { id: order.id },
+        data: { status: mapped },
+        include: {
+          user: { select: { id: true, name: true, email: true } },
+          orderItems: { include: { product: { select: { id: true, name: true, image: true, price: true } } } },
+        },
+      });
+      await notifyOrderStatusChange({ order: updatedOrder, previousStatus: order.status, triggeredBy: "ghn-sync" });
       // eslint-disable-next-line no-console
       console.log(`[Cron][GHN] Updated order ${order.id} (${code}) status ${order.status} -> ${mapped}`);
     }

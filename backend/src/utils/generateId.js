@@ -39,6 +39,7 @@ export async function generateId(prefix, tableName) {
 		OrderItem: prisma.orderItem,
 		Review: prisma.review,
 		ProductInteraction: prisma.productInteraction,
+		OrderStatusNotification: prisma.orderStatusNotification,
 	};
 
 	const model = tableMap[tableName];
@@ -126,6 +127,7 @@ export async function generateMultipleIds(prefix, tableName, count) {
 		OrderItem: prisma.orderItem,
 		Review: prisma.review,
 		ProductInteraction: prisma.productInteraction,
+		OrderStatusNotification: prisma.orderStatusNotification,
 	};
 
 	const model = tableMap[tableName];

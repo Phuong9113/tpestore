@@ -2,6 +2,7 @@ import prisma from "../utils/prisma.js";
 import xlsx from "xlsx";
 import ghnService from "../services/ghn.service.js";
 import { generateId, generateMultipleIds } from "../utils/generateId.js";
+import { notifyOrderStatusChange } from "../services/order-status-notification.service.js";
 
 // Users
 export const getAdminUsers = async (req, res, next) => {
@@ -518,7 +519,16 @@ export const updateAdminOrderStatus = async (req, res, next) => {
 		if (paymentStatus) updateData.paymentStatus = paymentStatus;
 		const order = await prisma.order.findUnique({ where: { id } });
 		if (!order) return res.status(404).json({ error: "Order not found" });
-		const updatedOrder = await prisma.order.update({ where: { id }, data: updateData, include: { user: { select: { id: true, name: true, email: true, phone: true } }, orderItems: { include: { product: { select: { id: true, name: true, image: true, price: true } } } } } });
+		const previousStatus = order.status;
+		const updatedOrder = await prisma.order.update({
+			where: { id },
+			data: updateData,
+			include: {
+				user: { select: { id: true, name: true, email: true, phone: true } },
+				orderItems: { include: { product: { select: { id: true, name: true, image: true, price: true } } } },
+			},
+		});
+		await notifyOrderStatusChange({ order: updatedOrder, previousStatus, triggeredBy: "admin" });
 		res.json(updatedOrder);
 	} catch (err) {
 		next(err);

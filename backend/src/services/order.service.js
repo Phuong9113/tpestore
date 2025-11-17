@@ -1,6 +1,7 @@
 import prisma from "../utils/prisma.js";
 import { validateRequired } from "../utils/helpers.js";
 import { generateId, generateMultipleIds } from "../utils/generateId.js";
+import { notifyOrderStatusChange } from "./order-status-notification.service.js";
 
 export const listForUser = (userId) =>
 	prisma.order.findMany({
@@ -93,7 +94,7 @@ export const create = async (userId, body) => {
 };
 
 export const updateStatusForUser = async (id, userId, status) => {
-	const valid = ["PENDING", "PAID", "SHIPPED", "COMPLETED", "CANCELLED"];
+	const valid = ["PENDING", "PROCESSING", "SHIPPING", "COMPLETED", "CANCELLED"];
 	if (!valid.includes(status)) {
 		const err = new Error("Invalid status");
 		err.status = 400;
@@ -105,11 +106,28 @@ export const updateStatusForUser = async (id, userId, status) => {
 		err.status = 404;
 		throw err;
 	}
-	return prisma.order.update({
+	if (existing.status === status) {
+		const order = await prisma.order.findUnique({
+			where: { id },
+			include: {
+				user: { select: { id: true, name: true, email: true } },
+				orderItems: { include: { product: { select: { id: true, name: true, image: true, price: true } } } },
+			},
+		});
+		const { user, ...orderWithoutUser } = order || {};
+		return orderWithoutUser;
+	}
+	const updated = await prisma.order.update({
 		where: { id },
 		data: { status },
-		include: { orderItems: { include: { product: { select: { id: true, name: true, image: true, price: true } } } } },
+		include: {
+			user: { select: { id: true, name: true, email: true } },
+			orderItems: { include: { product: { select: { id: true, name: true, image: true, price: true } } } },
+		},
 	});
+	await notifyOrderStatusChange({ order: updated, previousStatus: existing.status, triggeredBy: "customer" });
+	const { user, ...orderWithoutUser } = updated;
+	return orderWithoutUser;
 };
 
 export const getReviewEligibility = async (orderId, userId) => {

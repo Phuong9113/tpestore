@@ -3,6 +3,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { renderOrderCreatedEmail } from "../emails/OrderCreatedEmail.js";
+import { renderOrderStatusUpdatedEmail } from "../emails/OrderStatusUpdatedEmail.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -255,6 +256,67 @@ export async function sendOrderCreatedEmail({ to, customerName, ghnCode, shippin
     }
 }
 
-export default { sendOrderCreatedEmail };
+/**
+ * Send order status updated email
+ */
+export async function sendOrderStatusEmail({
+    to,
+    customerName,
+    orderId,
+    status,
+    statusLabel,
+    statusMessage,
+    updatedAt,
+    ghnCode,
+    totalPrice,
+    shippingFee = 0,
+    address,
+    items = [],
+}) {
+    const transporter = getTransporter();
+    if (!transporter) {
+        // eslint-disable-next-line no-console
+        console.warn("[Email] Cannot send status email - SMTP not configured.");
+        return { skipped: true, reason: "SMTP not configured" };
+    }
+
+    const { attachments, cidMap } = prepareImageAttachments(items);
+    const label = statusLabel || status || "Được cập nhật";
+    const subject = `Đơn hàng ${orderId || ""} ${label}`.trim();
+    const html = renderOrderStatusUpdatedEmail({
+        customerName,
+        orderId,
+        status,
+        statusLabel: label,
+        statusMessage,
+        updatedAt,
+        ghnCode,
+        totalPrice,
+        shippingFee,
+        address,
+        items,
+        cidMap,
+    });
+
+    const from = process.env.SMTP_FROM || process.env.SMTP_USER;
+    try {
+        await transporter.sendMail({
+            from,
+            to,
+            subject,
+            html,
+            attachments,
+        });
+        // eslint-disable-next-line no-console
+        console.log("[Email] Status email sent successfully");
+        return { sent: true, subject };
+    } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error("[Email] Failed to send status email:", error?.message || error);
+        throw error;
+    }
+}
+
+export default { sendOrderCreatedEmail, sendOrderStatusEmail };
 
 
