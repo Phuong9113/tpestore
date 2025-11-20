@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { login, setToken } from "@/lib/auth";
 import { useState } from "react";
+import { signIn } from "next-auth/react";
 import {
   EnvelopeIcon,
   LockClosedIcon,
@@ -21,6 +22,7 @@ export default function LoginPage() {
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -160,7 +162,18 @@ export default function LoginPage() {
 
           {/* Social Login */}
           <div className="space-y-3">
-            <button className="w-full flex items-center justify-center gap-3 py-3 border border-border rounded-lg hover:bg-secondary transition-colors">
+            <button
+              type="button"
+              onClick={() => {
+                setGoogleLoading(true)
+                signIn("google", { callbackUrl: "/login/google-success" }).catch(() => {
+                  setGoogleLoading(false)
+                  setError("Không thể kết nối Google, vui lòng thử lại")
+                })
+              }}
+              className="w-full flex items-center justify-center gap-3 py-3 border border-border rounded-lg hover:bg-secondary transition-colors disabled:opacity-60"
+              disabled={googleLoading}
+            >
               <svg className="w-5 h-5" viewBox="0 0 24 24">
                 <path
                   fill="currentColor"
@@ -180,7 +193,7 @@ export default function LoginPage() {
                 />
               </svg>
               <span className="text-foreground font-medium">
-                Đăng nhập với Google
+                {googleLoading ? "Đang mở Google..." : "Đăng nhập với Google"}
               </span>
             </button>
           </div>

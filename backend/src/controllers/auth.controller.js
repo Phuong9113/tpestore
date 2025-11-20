@@ -36,3 +36,12 @@ export const updateMe = async (req, res, next) => {
 		next(err);
 	}
 };
+
+export const loginWithGoogle = async (req, res, next) => {
+	try {
+		const result = await authService.loginWithGoogle(req.body);
+		success(res, result);
+	} catch (err) {
+		next(err);
+	}
+};

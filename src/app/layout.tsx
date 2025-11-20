@@ -7,6 +7,7 @@ import "./globals.css"
 import { CartProvider } from "@/contexts/CartContext"
 import { ComparisonProvider } from "@/contexts/ComparisonContext"
 import ConditionalLayout from "@/components/ConditionalLayout"
+import AuthSessionProvider from "@/components/SessionProvider"
 
 export const metadata: Metadata = {
   title: "TPE Store",
@@ -22,13 +23,15 @@ export default function RootLayout({
   return (
     <html lang="vi">
       <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable} antialiased`}>
-        <CartProvider>
-          <ComparisonProvider>
-            <Suspense fallback={null}>
-              <ConditionalLayout>{children}</ConditionalLayout>
-            </Suspense>
-          </ComparisonProvider>
-        </CartProvider>
+        <AuthSessionProvider>
+          <CartProvider>
+            <ComparisonProvider>
+              <Suspense fallback={null}>
+                <ConditionalLayout>{children}</ConditionalLayout>
+              </Suspense>
+            </ComparisonProvider>
+          </CartProvider>
+        </AuthSessionProvider>
         <Analytics />
       </body>
     </html>
